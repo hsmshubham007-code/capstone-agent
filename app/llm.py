@@ -5,6 +5,7 @@ from openai import OpenAI
 
 load_dotenv()
 
+
 client = OpenAI(
     api_key=os.getenv("GROQ_API_KEY"),
     base_url="https://api.groq.com/openai/v1"
@@ -13,7 +14,13 @@ client = OpenAI(
 MODEL = os.getenv("GROQ_MODEL")
 
 
+class LLMServiceError(Exception):
+    """Raised when the Groq LLM cannot generate an answer."""
+    pass
+
+
 def generate_answer(question, context):
+
     prompt = f"""
 You are a company policy assistant.
 
@@ -31,19 +38,26 @@ Context:
 
 Question:
 {question}
-
 Answer:
 """
 
-    response = client.chat.completions.create(
-        model=MODEL,
-        messages=[
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ],
-        temperature=0
-    )
+    try:
 
-    return response.choices[0].message.content
+        response = client.chat.completions.create(
+            model=MODEL,
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            temperature=0
+        )
+
+        return response.choices[0].message.content
+
+    except Exception as exc:
+
+        raise LLMServiceError(
+            "The Groq LLM service is currently unavailable."
+        ) from exc

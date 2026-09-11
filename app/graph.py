@@ -4,12 +4,14 @@ from typing import Literal
 
 from langgraph.graph import END, START, StateGraph
 
+from app.checkpoint import checkpointer
 from app.router import decide_tool
 from app.state import AgentState
 from app.tools import search_documents_tool
 
 
 def router_node(state: AgentState):
+
     start = time.perf_counter()
 
     tool = decide_tool(
@@ -32,6 +34,7 @@ def router_node(state: AgentState):
 
 
 def search_node(state: AgentState):
+
     start = time.perf_counter()
 
     result = search_documents_tool(
@@ -46,18 +49,19 @@ def search_node(state: AgentState):
         "sources": result["sources"],
         "tools_used": [result["name"]],
         "trace": state["trace"] + [
-           {
-               "step": "search_documents",
-               "tool": result["name"],
-               "sources": result["sources"],
-               "results": result["results"],
-               "duration": duration
+            {
+                "step": "search_documents",
+                "tool": result["name"],
+                "sources": result["sources"],
+                "results": result["results"],
+                "duration": duration
             }
         ]
     }
 
 
 def no_tool_node(state: AgentState):
+
     return {
         "answer": "I don't have a tool that can answer this question.",
         "sources": [],
@@ -71,6 +75,7 @@ def no_tool_node(state: AgentState):
         ]
     }
 
+
 def route_after_router(
     state: AgentState
 ) -> Literal["search", "no_tool"]:
@@ -83,11 +88,25 @@ def route_after_router(
 
 builder = StateGraph(AgentState)
 
-builder.add_node("router", router_node)
-builder.add_node("search", search_node)
-builder.add_node("no_tool", no_tool_node)
+builder.add_node(
+    "router",
+    router_node
+)
 
-builder.add_edge(START, "router")
+builder.add_node(
+    "search",
+    search_node
+)
+
+builder.add_node(
+    "no_tool",
+    no_tool_node
+)
+
+builder.add_edge(
+    START,
+    "router"
+)
 
 builder.add_conditional_edges(
     "router",
@@ -98,7 +117,17 @@ builder.add_conditional_edges(
     }
 )
 
-builder.add_edge("search", END)
-builder.add_edge("no_tool", END)
+builder.add_edge(
+    "search",
+    END
+)
 
-graph = builder.compile()
+builder.add_edge(
+    "no_tool",
+    END
+)
+
+
+graph = builder.compile(
+    checkpointer=checkpointer
+)

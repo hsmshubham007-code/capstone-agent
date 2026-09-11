@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+openai
+python-dotenv
+
+langgraph
+langgraph-checkpoint-sqlite
+
+langchain-chroma
+langchain-huggingface
+langchain-community
+
+chromadb
+sentence-transformers
+pypdf
