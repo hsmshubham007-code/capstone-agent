@@ -184,8 +184,8 @@ def search_node(state: AgentState):
 def no_tool_node(state: AgentState):
     return {
         "answer": (
-            "I don't have a tool that can answer "
-            "this question."
+            "I don't have enough information in the "
+            "provided documents to answer that question."
         ),
         "sources": [],
         "tools_used": [],

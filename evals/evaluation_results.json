@@ -1,0 +1,109 @@
+{
+    "summary": {
+        "total_cases": 5,
+        "passed_cases": 5,
+        "failed_cases": 0,
+        "pass_rate": 1.0,
+        "average_latency_ms": 4369.04,
+        "p50_latency_ms": 744.07,
+        "p95_latency_ms": 15593.67
+    },
+    "categories": {
+        "HR": {
+            "passed": 2,
+            "total": 2,
+            "pass_rate": 1.0
+        },
+        "Company": {
+            "passed": 1,
+            "total": 1,
+            "pass_rate": 1.0
+        },
+        "IT": {
+            "passed": 1,
+            "total": 1,
+            "pass_rate": 1.0
+        },
+        "Out-of-scope": {
+            "passed": 1,
+            "total": 1,
+            "pass_rate": 1.0
+        }
+    },
+    "results": [
+        {
+            "id": "hr_001",
+            "category": "HR",
+            "question": "What does the company say about professional conduct?",
+            "status": "PASS",
+            "latency_ms": 19205.33,
+            "sources": [
+                "hr_policy.pdf",
+                "company_policy.pdf"
+            ],
+            "tools_used": [
+                "search_documents"
+            ]
+        },
+        {
+            "id": "hr_002",
+            "category": "HR",
+            "question": "What should employees do about workplace harassment?",
+            "status": "PASS",
+            "latency_ms": 733.55,
+            "sources": [
+                "hr_policy.pdf",
+                "company_policy.pdf"
+            ],
+            "tools_used": [
+                "search_documents"
+            ]
+        },
+        {
+            "id": "company_001",
+            "category": "Company",
+            "question": "What should employees do if they identify a policy violation?",
+            "status": "PASS",
+            "latency_ms": 744.07,
+            "sources": [
+                "company_policy.pdf"
+            ],
+            "tools_used": [
+                "search_documents"
+            ]
+        },
+        {
+            "id": "it_001",
+            "category": "IT",
+            "question": "How should company information be protected?",
+            "status": "PASS",
+            "latency_ms": 1147.04,
+            "sources": [
+                "company_policy.pdf",
+                "it_policy.pdf"
+            ],
+            "tools_used": [
+                "search_documents"
+            ]
+        },
+        {
+            "id": "out_of_scope_001",
+            "category": "Out-of-scope",
+            "question": "What is the current stock price of the company?",
+            "status": "PASS",
+            "latency_ms": 15.22,
+            "sources": [],
+            "tools_used": []
+        }
+    ],
+    "limitations": [
+        "Evaluation dataset is small.",
+        "Correctness uses keyword-based scoring.",
+        "Keyword matching does not fully measure semantic correctness.",
+        "Latency can vary because of model and network conditions.",
+        "The first request may include model or embedding cold-start overhead.",
+        "Cost is estimated from representative token usage.",
+        "Production traffic may have different token distributions.",
+        "A larger stratified production dataset is required for stronger confidence."
+    ]
+}

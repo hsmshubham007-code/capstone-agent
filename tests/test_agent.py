@@ -95,7 +95,10 @@ def test_agent_rejects_unknown_question():
 
     assert result["tool"] == "no_tool"
     assert result["sources"] == []
-    assert "I don't have a tool" in result["answer"]
+    assert (
+    "I don't have enough information"
+    in result["answer"]
+)
 
 
 def test_agent_returns_structured_state():

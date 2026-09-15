@@ -52,7 +52,7 @@ class ChatResponse(BaseModel):
 
 
 # =========================================================
-# Request ID middleware
+# Request ID + Monitoring Middleware
 # =========================================================
 
 @app.middleware("http")
@@ -63,10 +63,11 @@ async def request_logging_middleware(
     """
     Add a request ID to every HTTP request.
 
-    Also records:
-    - request count
-    - success/error count
-    - latency
+    Records:
+    - total requests
+    - successful requests
+    - failed requests
+    - request latency
     - structured logs
     """
 
@@ -79,7 +80,7 @@ async def request_logging_middleware(
     start_time = time.perf_counter()
 
     metrics.increment(
-        "http_requests_total"
+        "requests_total"
     )
 
     try:
@@ -98,13 +99,13 @@ async def request_logging_middleware(
         if response.status_code < 400:
 
             metrics.increment(
-                "http_requests_success_total"
+                "requests_success_total"
             )
 
         else:
 
             metrics.increment(
-                "http_requests_error_total"
+                "requests_errors_total"
             )
 
         response.headers[
@@ -116,6 +117,7 @@ async def request_logging_middleware(
             extra={
                 "request_id": request_id,
                 "endpoint": request.url.path,
+                "method": request.method,
                 "status": response.status_code,
                 "latency_ms": round(
                     latency_ms,
@@ -134,7 +136,7 @@ async def request_logging_middleware(
         ) * 1000
 
         metrics.increment(
-            "http_requests_error_total"
+            "requests_errors_total"
         )
 
         metrics.observe_latency(
@@ -146,6 +148,7 @@ async def request_logging_middleware(
             extra={
                 "request_id": request_id,
                 "endpoint": request.url.path,
+                "method": request.method,
                 "status": 500,
                 "latency_ms": round(
                     latency_ms,
@@ -188,8 +191,7 @@ def health():
     """
     Liveness check.
 
-    This should only answer whether
-    the API process itself is alive.
+    Only verifies that the API process is alive.
     """
 
     return {
@@ -282,13 +284,15 @@ def get_metrics():
     """
     Return application monitoring metrics.
 
-    Current metrics include:
-    - HTTP request count
-    - HTTP success/error count
-    - request latency
-    - LLM request count
+    Includes:
+    - request count
+    - success/error count
+    - average latency
+    - p50 latency
+    - p95 latency
     - LLM token usage
     - LLM errors
+    - cost information
     """
 
     return metrics.snapshot()
@@ -304,10 +308,17 @@ def get_metrics():
 )
 def chat(
     request: ChatRequest,
+    http_request: Request,
 ):
+    """
+    Execute the Company Policy Agent.
+    """
 
+    # IMPORTANT:
+    # request = ChatRequest
+    # http_request = FastAPI Request
     request_id = getattr(
-        request.state,
+        http_request.state,
         "request_id",
         str(uuid4()),
     )
@@ -360,6 +371,10 @@ def chat(
             - start_time
         ) * 1000
 
+        metrics.increment(
+            "llm_service_errors_total"
+        )
+
         logger.error(
             "LLM service unavailable",
             extra={
@@ -391,6 +406,10 @@ def chat(
             time.perf_counter()
             - start_time
         ) * 1000
+
+        metrics.increment(
+            "agent_errors_total"
+        )
 
         logger.exception(
             "Agent request failed",
@@ -425,6 +444,20 @@ def chat(
         - start_time
     ) * 1000
 
+    metrics.increment(
+        "chat_requests_success_total"
+    )
+
+    if result.get("tools_used"):
+        metrics.increment(
+            "tool_using_requests_total"
+        )
+
+    if result.get("sources"):
+        metrics.increment(
+            "retrieval_success_total"
+        )
+
     logger.info(
         "Chat request completed",
         extra={
@@ -439,6 +472,16 @@ def chat(
             "tool": result.get(
                 "tool",
                 "",
+            ),
+            "tools_used": result.get(
+                "tools_used",
+                [],
+            ),
+            "sources_count": len(
+                result.get(
+                    "sources",
+                    [],
+                )
             ),
         },
     )

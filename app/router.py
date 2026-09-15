@@ -76,6 +76,36 @@ def decide_tool(
         "workplace conduct",
         "code of conduct",
 
+        # Workplace behavior
+        "harassment",
+        "workplace harassment",
+        "sexual harassment",
+        "discrimination",
+        "bullying",
+        "violence",
+        "threat",
+        "inappropriate behavior",
+        "misconduct",
+        "grievance",
+        "complaint",
+        "report harassment",
+
+        # Reporting / compliance
+        "policy violation",
+        "policy violations",
+        "violation",
+        "violations",
+        "report a violation",
+        "report violations",
+        "reporting a violation",
+        "reporting violations",
+        "report it",
+        "reporting",
+        "non-retaliation",
+        "retaliation",
+        "compliance",
+        "compliant",
+
         # IT / Security
         "security policy",
         "security policies",
@@ -88,6 +118,17 @@ def decide_tool(
         "access control",
         "data security",
         "information security",
+        "cybersecurity",
+        "security",
+        "data protection",
+        "protect data",
+        "protect information",
+        "protect company information",
+        "company information",
+        "confidentiality",
+        "confidential information",
+        "sensitive information",
+        "information protection",
 
         # Company document language
         "company says",
@@ -95,6 +136,7 @@ def decide_tool(
         "company policy says",
         "according to company policy",
         "according to the policy",
+        "according to company rules",
 
         # Common policy subjects
         "laptop",
@@ -110,8 +152,9 @@ def decide_tool(
         "notice",
         "disciplinary",
         "discipline",
-        "confidentiality",
-        "confidential information",
+        "training",
+        "employee responsibilities",
+        "employee responsibility",
     ]
 
     if any(
@@ -121,7 +164,63 @@ def decide_tool(
         return "search_documents"
 
     # -------------------------------------------------
-    # 3. Follow-up questions
+    # 3. Natural-language policy questions
+    # -------------------------------------------------
+
+    # Some policy questions do not contain the word
+    # "policy". These patterns catch common questions
+    # about employee/company rules.
+
+    question_patterns = [
+        "what should employees do",
+        "what must employees do",
+        "what are employees expected to do",
+        "what can employees do",
+        "what should i do",
+        "what must i do",
+        "how should employees",
+        "how must employees",
+        "how can employees",
+        "what happens if an employee",
+        "what happens if i",
+        "are employees allowed",
+        "is an employee allowed",
+        "can employees",
+        "can i",
+        "must employees",
+        "do employees need to",
+        "are we allowed to",
+        "am i allowed to",
+    ]
+
+    if any(
+        pattern in question_lower
+        for pattern in question_patterns
+    ):
+        # Avoid routing obviously external questions
+        # such as stock prices or weather to the RAG tool.
+        external_keywords = [
+            "stock price",
+            "share price",
+            "weather",
+            "news",
+            "current price",
+            "market price",
+            "bitcoin",
+            "cryptocurrency",
+            "sports score",
+            "cricket score",
+            "football score",
+        ]
+
+        if not any(
+            keyword in question_lower
+            for keyword in external_keywords
+        ):
+            return "search_documents"
+
+    # -------------------------------------------------
+    # 4. Follow-up questions
     # -------------------------------------------------
 
     if history:
@@ -137,6 +236,8 @@ def decide_tool(
             "explain that",
             "explain it",
             "what about that",
+            "can you explain",
+            "please explain",
         ]
 
         if any(
@@ -146,7 +247,7 @@ def decide_tool(
             return "search_documents"
 
     # -------------------------------------------------
-    # 4. Nothing appropriate
+    # 5. Nothing appropriate
     # -------------------------------------------------
 
     return "no_tool"
