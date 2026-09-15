@@ -17,14 +17,6 @@ logger = logging.getLogger(
     "company-policy-agent.llm"
 )
 
-GROQ_API_KEY = os.getenv(
-    "GROQ_API_KEY"
-)
-
-MODEL = os.getenv(
-    "GROQ_MODEL"
-)
-
 GROQ_BASE_URL = (
     "https://api.groq.com/openai/v1"
 )
@@ -42,17 +34,41 @@ class LLMServiceError(Exception):
 
 
 # =========================================================
+# Runtime configuration
+# =========================================================
+
+def get_api_key():
+    """
+    Read the Groq API key at runtime.
+
+    Reading the environment here instead of storing it
+    in a module-level variable makes testing with
+    pytest monkeypatch.setenv() work correctly.
+    """
+    return os.getenv("GROQ_API_KEY")
+
+
+def get_model():
+    """
+    Read the Groq model at runtime.
+    """
+    return os.getenv("GROQ_MODEL")
+
+
+# =========================================================
 # Groq client
 # =========================================================
 
 def get_client():
-    if not GROQ_API_KEY:
+    api_key = get_api_key()
+
+    if not api_key:
         raise LLMServiceError(
             "GROQ_API_KEY is missing."
         )
 
     return OpenAI(
-        api_key=GROQ_API_KEY,
+        api_key=api_key,
         base_url=GROQ_BASE_URL,
     )
 
@@ -152,10 +168,17 @@ Answer:
 """
 
     # -----------------------------------------------------
+    # Read configuration at runtime
+    # -----------------------------------------------------
+
+    api_key = get_api_key()
+    model = get_model()
+
+    # -----------------------------------------------------
     # Validate configuration
     # -----------------------------------------------------
 
-    if not GROQ_API_KEY:
+    if not api_key:
         metrics.increment(
             "llm_configuration_errors_total"
         )
@@ -168,7 +191,7 @@ Answer:
             "The Groq API key is not configured."
         )
 
-    if not MODEL:
+    if not model:
         metrics.increment(
             "llm_configuration_errors_total"
         )
@@ -203,7 +226,7 @@ Answer:
         # -------------------------------------------------
 
         response = client.chat.completions.create(
-            model=MODEL,
+            model=model,
             messages=[
                 {
                     "role": "user",
@@ -270,7 +293,7 @@ Answer:
         # -------------------------------------------------
 
         cost_usd = calculate_cost(
-            model=MODEL,
+            model=model,
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
         )
@@ -294,7 +317,7 @@ Answer:
         logger.info(
             "LLM request completed",
             extra={
-                "model": MODEL,
+                "model": model,
                 "latency_ms": round(
                     latency_ms,
                     2,
@@ -333,8 +356,16 @@ Answer:
 
         return answer.strip()
 
+    # -----------------------------------------------------
+    # Preserve our own service errors
+    # -----------------------------------------------------
+
     except LLMServiceError:
         raise
+
+    # -----------------------------------------------------
+    # Convert unexpected errors into service errors
+    # -----------------------------------------------------
 
     except Exception as exc:
         latency_ms = (
@@ -353,7 +384,7 @@ Answer:
         logger.exception(
             "LLM request failed",
             extra={
-                "model": MODEL,
+                "model": model,
                 "latency_ms": round(
                     latency_ms,
                     2,
@@ -365,3 +396,4 @@ Answer:
         raise LLMServiceError(
             "The Groq LLM service is currently unavailable."
         ) from exc
+
