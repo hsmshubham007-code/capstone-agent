@@ -1,67 +1,152 @@
-import json
-import os
+def decide_tool(
+    question: str,
+    history=None,
+):
+    """
+    Decide which tool should handle the request.
 
-from dotenv import load_dotenv
-from openai import OpenAI
+    Available tools:
 
-from app.context import build_contextual_query
+    - search_documents
+    - update_employee_record
+    - no_tool
 
-load_dotenv()
+    Risky tools are NOT executed here.
+    The graph sends risky tools to the approval gate.
+    """
 
-client = OpenAI(
-    api_key=os.getenv("GROQ_API_KEY"),
-    base_url="https://api.groq.com/openai/v1"
-)
+    question_lower = question.lower().strip()
 
-MODEL = os.getenv("GROQ_MODEL")
+    # -------------------------------------------------
+    # 1. Risky employee-record operations
+    # -------------------------------------------------
 
+    employee_update_keywords = [
+        "update employee",
+        "update the employee",
+        "change employee",
+        "change the employee",
+        "update employee record",
+        "change employee record",
+        "employee record",
+        "update salary",
+        "change salary",
+        "increase salary",
+        "decrease salary",
+        "modify salary",
+    ]
 
-def decide_tool(question, history=None):
-    history = history or []
+    if any(
+        keyword in question_lower
+        for keyword in employee_update_keywords
+    ):
+        return "update_employee_record"
 
-    contextual_question = build_contextual_query(
-        question,
-        history
-    )
+    # -------------------------------------------------
+    # 2. Company policy / document questions
+    # -------------------------------------------------
 
-    prompt = f"""
-You are an agent router.
+    policy_keywords = [
+        # General policy terms
+        "policy",
+        "policies",
+        "company policy",
+        "company policies",
+        "company rules",
+        "rules",
+        "guidelines",
+        "procedure",
+        "procedures",
 
-Choose the correct action for the user question.
+        # HR
+        "leave",
+        "holiday",
+        "holidays",
+        "hr policy",
+        "hr",
+        "employee benefits",
+        "benefits",
+        "remote work",
+        "hybrid work",
+        "attendance",
+        "resignation",
+        "notice period",
+        "employee conduct",
+        "professional conduct",
+        "workplace conduct",
+        "code of conduct",
 
-Available actions:
-- search_documents: use this for questions about company policies, employees, workplace rules, IT policies, HR policies, or information that may exist in company documents.
-- no_tool: use this when the question clearly cannot be answered using company documents.
+        # IT / Security
+        "security policy",
+        "security policies",
+        "security procedures",
+        "password policy",
+        "password policies",
+        "it policy",
+        "it policies",
+        "acceptable use",
+        "access control",
+        "data security",
+        "information security",
 
-Important:
-- Follow-up questions refer to the previous conversation.
-- If the current question is a follow-up to a company-document question, choose search_documents.
-- "Tell me that again", "what about that?", "explain more", and similar follow-ups should use the same tool as the previous relevant question.
+        # Company document language
+        "company says",
+        "company's policy",
+        "company policy says",
+        "according to company policy",
+        "according to the policy",
 
-Return ONLY valid JSON.
+        # Common policy subjects
+        "laptop",
+        "laptops",
+        "equipment",
+        "work from home",
+        "wfh",
+        "working hours",
+        "work hours",
+        "attendance policy",
+        "vacation",
+        "time off",
+        "notice",
+        "disciplinary",
+        "discipline",
+        "confidentiality",
+        "confidential information",
+    ]
 
-Format:
-{{"tool": "search_documents"}}
+    if any(
+        keyword in question_lower
+        for keyword in policy_keywords
+    ):
+        return "search_documents"
 
-or:
+    # -------------------------------------------------
+    # 3. Follow-up questions
+    # -------------------------------------------------
 
-{{"tool": "no_tool"}}
+    if history:
+        followup_keywords = [
+            "tell me that again",
+            "tell me again",
+            "repeat that",
+            "repeat it",
+            "what did you say",
+            "can you repeat",
+            "that again",
+            "more details",
+            "explain that",
+            "explain it",
+            "what about that",
+        ]
 
-Conversation:
-{contextual_question}
-"""
+        if any(
+            keyword in question_lower
+            for keyword in followup_keywords
+        ):
+            return "search_documents"
 
-    response = client.chat.completions.create(
-        model=MODEL,
-        messages=[
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ],
-        temperature=0
-    )
+    # -------------------------------------------------
+    # 4. Nothing appropriate
+    # -------------------------------------------------
 
-    content = response.choices[0].message.content
-
-    return json.loads(content)["tool"]
+    return "no_tool"

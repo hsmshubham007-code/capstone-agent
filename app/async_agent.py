@@ -2,7 +2,7 @@ import asyncio
 import time
 
 from app.async_tools import run_tools_parallel
-from app.llm import client, MODEL
+from app.llm import MODEL, client
 
 
 def format_context(tool_results):

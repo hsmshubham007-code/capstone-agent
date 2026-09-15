@@ -3,7 +3,6 @@ from pathlib import Path
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-
 DATA_DIR = Path("data")
 
 

@@ -1,10 +1,9 @@
 from pathlib import Path
 
-from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
+from langchain_community.embeddings import HuggingFaceEmbeddings
 
 from app.ingest import load_pdfs, split_documents
-
 
 CHROMA_DIR = Path("storage/chroma")
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"

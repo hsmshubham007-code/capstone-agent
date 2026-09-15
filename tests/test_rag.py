@@ -1,5 +1,5 @@
-from app.retrieval import search_documents
 from app.rag import answer_question
+from app.retrieval import search_documents
 
 
 def test_relevant_question():

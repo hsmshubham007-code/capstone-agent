@@ -14,3 +14,5 @@ storage/
 .streamlit/
 
 evaluation_results.json
+
+audit_logs/

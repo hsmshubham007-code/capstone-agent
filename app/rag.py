@@ -1,5 +1,5 @@
-from app.retrieval import search_documents
 from app.llm import generate_answer
+from app.retrieval import search_documents
 
 
 def answer_question(question, k=3):

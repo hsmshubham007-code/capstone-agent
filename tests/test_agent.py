@@ -1,5 +1,23 @@
+import pytest
+
 from app.agent import run_agent
 from app.router import decide_tool
+
+
+@pytest.fixture(autouse=True)
+def mock_llm(monkeypatch):
+    def fake_generate_answer(question, context):
+        return (
+            "The company expects professional conduct from all employees. "
+        "Employees must understand and follow applicable policies and "
+        "procedures. Harassment, discrimination, bullying, threats, "
+        "violence, and inappropriate workplace behavior are not tolerated."
+        )
+
+    monkeypatch.setattr(
+        "app.rag.generate_answer",
+        fake_generate_answer,
+    )
 
 
 def test_policy_question_uses_search():

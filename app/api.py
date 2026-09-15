@@ -1,18 +1,41 @@
+import logging
+import os
+import time
 from uuid import uuid4
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
 
 from app.graph import graph
 from app.llm import LLMServiceError
+from app.logging_config import setup_logging
+from app.metrics import metrics
 
+# =========================================================
+# Logging
+# =========================================================
+
+setup_logging()
+
+logger = logging.getLogger(
+    "company-policy-agent.api"
+)
+
+
+# =========================================================
+# FastAPI application
+# =========================================================
 
 app = FastAPI(
     title="Company Policy Agent API",
-    description="LangGraph + RAG company policy agent",
-    version="1.0.0"
+    description="Production Company Policy Agent using LangGraph + RAG",
+    version="1.1.0",
 )
 
+
+# =========================================================
+# Request / Response models
+# =========================================================
 
 class ChatRequest(BaseModel):
     question: str
@@ -20,6 +43,7 @@ class ChatRequest(BaseModel):
 
 
 class ChatResponse(BaseModel):
+    request_id: str
     thread_id: str
     answer: str
     sources: list[str]
@@ -27,20 +51,283 @@ class ChatResponse(BaseModel):
     trace: list[dict]
 
 
-@app.get("/health")
-def health():
+# =========================================================
+# Request ID middleware
+# =========================================================
+
+@app.middleware("http")
+async def request_logging_middleware(
+    request: Request,
+    call_next,
+):
+    """
+    Add a request ID to every HTTP request.
+
+    Also records:
+    - request count
+    - success/error count
+    - latency
+    - structured logs
+    """
+
+    request_id = request.headers.get(
+        "X-Request-ID"
+    ) or str(uuid4())
+
+    request.state.request_id = request_id
+
+    start_time = time.perf_counter()
+
+    metrics.increment(
+        "http_requests_total"
+    )
+
+    try:
+
+        response = await call_next(request)
+
+        latency_ms = (
+            time.perf_counter()
+            - start_time
+        ) * 1000
+
+        metrics.observe_latency(
+            latency_ms
+        )
+
+        if response.status_code < 400:
+
+            metrics.increment(
+                "http_requests_success_total"
+            )
+
+        else:
+
+            metrics.increment(
+                "http_requests_error_total"
+            )
+
+        response.headers[
+            "X-Request-ID"
+        ] = request_id
+
+        logger.info(
+            "HTTP request completed",
+            extra={
+                "request_id": request_id,
+                "endpoint": request.url.path,
+                "status": response.status_code,
+                "latency_ms": round(
+                    latency_ms,
+                    2,
+                ),
+            },
+        )
+
+        return response
+
+    except Exception as exc:
+
+        latency_ms = (
+            time.perf_counter()
+            - start_time
+        ) * 1000
+
+        metrics.increment(
+            "http_requests_error_total"
+        )
+
+        metrics.observe_latency(
+            latency_ms
+        )
+
+        logger.exception(
+            "HTTP request failed",
+            extra={
+                "request_id": request_id,
+                "endpoint": request.url.path,
+                "status": 500,
+                "latency_ms": round(
+                    latency_ms,
+                    2,
+                ),
+                "error": str(exc),
+            },
+        )
+
+        raise
+
+
+# =========================================================
+# Root endpoint
+# =========================================================
+
+@app.get("/")
+def root():
+    """
+    Basic service information.
+    """
+
     return {
-        "status": "healthy",
-        "service": "company-policy-agent"
+        "service": "company-policy-agent",
+        "version": "1.1.0",
+        "status": "running",
+        "docs": "/docs",
+        "health": "/health",
+        "ready": "/ready",
+        "metrics": "/metrics",
     }
 
 
-@app.post("/chat", response_model=ChatResponse)
-def chat(request: ChatRequest):
+# =========================================================
+# Health check
+# =========================================================
 
-    thread_id = request.thread_id or str(uuid4())
+@app.get("/health")
+def health():
+    """
+    Liveness check.
+
+    This should only answer whether
+    the API process itself is alive.
+    """
+
+    return {
+        "status": "healthy",
+        "service": "company-policy-agent",
+        "version": "1.1.0",
+    }
+
+
+# =========================================================
+# Readiness check
+# =========================================================
+
+@app.get("/ready")
+def ready():
+    """
+    Readiness check.
+
+    Verifies required configuration
+    and persistent storage.
+    """
+
+    groq_api_key = os.getenv(
+        "GROQ_API_KEY"
+    )
+
+    groq_model = os.getenv(
+        "GROQ_MODEL"
+    )
+
+    chroma_path = os.getenv(
+        "CHROMA_PATH",
+        "storage/chroma",
+    )
+
+    checkpoint_path = os.getenv(
+        "CHECKPOINT_DIR",
+        "storage/checkpoints",
+    )
+
+    checks = {
+        "groq_api_key": bool(
+            groq_api_key
+        ),
+        "groq_model": bool(
+            groq_model
+        ),
+        "chroma_storage": os.path.isdir(
+            chroma_path
+        ),
+        "checkpoint_storage": os.path.isdir(
+            checkpoint_path
+        ),
+    }
+
+    ready_status = all(
+        checks.values()
+    )
+
+    if not ready_status:
+
+        logger.warning(
+            "Application is not ready",
+            extra={
+                "status": "not_ready",
+            },
+        )
+
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "status": "not_ready",
+                "checks": checks,
+            },
+        )
+
+    return {
+        "status": "ready",
+        "service": "company-policy-agent",
+        "checks": checks,
+    }
+
+
+# =========================================================
+# Metrics
+# =========================================================
+
+@app.get("/metrics")
+def get_metrics():
+    """
+    Return application monitoring metrics.
+
+    Current metrics include:
+    - HTTP request count
+    - HTTP success/error count
+    - request latency
+    - LLM request count
+    - LLM token usage
+    - LLM errors
+    """
+
+    return metrics.snapshot()
+
+
+# =========================================================
+# Chat
+# =========================================================
+
+@app.post(
+    "/chat",
+    response_model=ChatResponse,
+)
+def chat(
+    request: ChatRequest,
+):
+
+    request_id = getattr(
+        request.state,
+        "request_id",
+        str(uuid4()),
+    )
+
+    thread_id = (
+        request.thread_id
+        or str(uuid4())
+    )
+
+    logger.info(
+        "Chat request started",
+        extra={
+            "request_id": request_id,
+            "thread_id": thread_id,
+            "endpoint": "/chat",
+        },
+    )
 
     initial_state = {
+        "request_id": request_id,
         "session_id": thread_id,
         "question": request.question,
         "conversation_history": [],
@@ -48,8 +335,12 @@ def chat(request: ChatRequest):
         "answer": "",
         "sources": [],
         "tools_used": [],
-        "trace": []
+        "approval_id": "",
+        "approval_status": "",
+        "trace": [],
     }
+
+    start_time = time.perf_counter()
 
     try:
 
@@ -57,59 +348,191 @@ def chat(request: ChatRequest):
             initial_state,
             config={
                 "configurable": {
-                    "thread_id": thread_id
+                    "thread_id": thread_id,
                 }
-            }
+            },
         )
 
     except LLMServiceError as exc:
+
+        latency_ms = (
+            time.perf_counter()
+            - start_time
+        ) * 1000
+
+        logger.error(
+            "LLM service unavailable",
+            extra={
+                "request_id": request_id,
+                "thread_id": thread_id,
+                "endpoint": "/chat",
+                "status": 503,
+                "latency_ms": round(
+                    latency_ms,
+                    2,
+                ),
+                "error": str(exc),
+            },
+        )
 
         raise HTTPException(
             status_code=503,
             detail={
                 "error": "llm_unavailable",
                 "message": str(exc),
+                "request_id": request_id,
                 "thread_id": thread_id,
-                "failover": "Retry the request when the Groq service is available."
-            }
-        )
+            },
+        ) from exc
 
     except Exception as exc:
+
+        latency_ms = (
+            time.perf_counter()
+            - start_time
+        ) * 1000
+
+        logger.exception(
+            "Agent request failed",
+            extra={
+                "request_id": request_id,
+                "thread_id": thread_id,
+                "endpoint": "/chat",
+                "status": 500,
+                "latency_ms": round(
+                    latency_ms,
+                    2,
+                ),
+                "error": str(exc),
+            },
+        )
 
         raise HTTPException(
             status_code=500,
             detail={
                 "error": "agent_error",
-                "message": "The agent could not complete the request.",
-                "thread_id": thread_id
-            }
+                "message": (
+                    "The agent could not "
+                    "complete the request."
+                ),
+                "request_id": request_id,
+                "thread_id": thread_id,
+            },
         ) from exc
 
-    return {
-        "thread_id": thread_id,
-        "answer": result["answer"],
-        "sources": result["sources"],
-        "tools_used": result["tools_used"],
-        "trace": result["trace"]
-    }
+    latency_ms = (
+        time.perf_counter()
+        - start_time
+    ) * 1000
 
-
-@app.get("/checkpoint/{thread_id}")
-def get_checkpoint(thread_id: str):
-
-    state = graph.get_state(
-        {
-            "configurable": {
-                "thread_id": thread_id
-            }
-        }
+    logger.info(
+        "Chat request completed",
+        extra={
+            "request_id": request_id,
+            "thread_id": thread_id,
+            "endpoint": "/chat",
+            "status": 200,
+            "latency_ms": round(
+                latency_ms,
+                2,
+            ),
+            "tool": result.get(
+                "tool",
+                "",
+            ),
+        },
     )
 
     return {
+        "request_id": request_id,
         "thread_id": thread_id,
+        "answer": result.get(
+            "answer",
+            "",
+        ),
+        "sources": result.get(
+            "sources",
+            [],
+        ),
+        "tools_used": result.get(
+            "tools_used",
+            [],
+        ),
+        "trace": result.get(
+            "trace",
+            [],
+        ),
+    }
+
+
+# =========================================================
+# Checkpoint
+# =========================================================
+
+@app.get(
+    "/checkpoint/{thread_id}"
+)
+def get_checkpoint(
+    thread_id: str,
+):
+    """
+    Retrieve the latest LangGraph checkpoint
+    for a conversation thread.
+    """
+
+    try:
+
+        state = graph.get_state(
+            {
+                "configurable": {
+                    "thread_id": thread_id,
+                }
+            }
+        )
+
+    except Exception as exc:
+
+        logger.exception(
+            "Checkpoint lookup failed",
+            extra={
+                "thread_id": thread_id,
+                "endpoint": (
+                    "/checkpoint/"
+                    + thread_id
+                ),
+                "status": 500,
+                "error": str(exc),
+            },
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "checkpoint_error",
+                "message": (
+                    "Could not retrieve "
+                    "the checkpoint."
+                ),
+                "thread_id": thread_id,
+            },
+        ) from exc
+
+    if state is None:
+
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error": "checkpoint_not_found",
+                "thread_id": thread_id,
+            },
+        )
+
+    return {
         "checkpoint_id": state.config.get(
             "configurable",
-            {}
-        ).get("checkpoint_id"),
-        "values": state.values
+            {},
+        ).get(
+            "checkpoint_id"
+        ),
+        "values": state.values,
     }

@@ -5,19 +5,68 @@ CHROMA_DIR = "storage/chroma"
 COLLECTION_NAME = "capstone_documents"
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
-embeddings = HuggingFaceEmbeddings(
-    model_name=EMBEDDING_MODEL
-)
 
-db = Chroma(
-    persist_directory=CHROMA_DIR,
-    collection_name=COLLECTION_NAME,
-    embedding_function=embeddings
-)
+_embeddings = None
+_db = None
 
 
-def search_documents(query, k=3, max_distance=1.4):
-    results = db.similarity_search_with_score(query, k=k)
+def get_embeddings():
+    """
+    Create the Hugging Face embedding model lazily.
+
+    The model is not downloaded or initialized when this
+    module is imported. It is initialized only when
+    document search is actually requested.
+    """
+
+    global _embeddings
+
+    if _embeddings is None:
+        _embeddings = HuggingFaceEmbeddings(
+            model_name=EMBEDDING_MODEL
+        )
+
+    return _embeddings
+
+
+def get_db():
+    """
+    Create the Chroma database connection lazily.
+
+    This prevents Hugging Face model initialization during
+    pytest collection and application imports.
+    """
+
+    global _db
+
+    if _db is None:
+        _db = Chroma(
+            persist_directory=CHROMA_DIR,
+            collection_name=COLLECTION_NAME,
+            embedding_function=get_embeddings(),
+        )
+
+    return _db
+
+
+def search_documents(
+    query,
+    k=3,
+    max_distance=1.4,
+):
+    """
+    Search the company policy documents.
+
+    The embedding model and Chroma database are initialized
+    only when this function is actually called.
+    """
+
+    db = get_db()
+
+    results = db.similarity_search_with_score(
+        query,
+        k=k,
+    )
 
     return [
         (doc, score)
@@ -33,8 +82,13 @@ if __name__ == "__main__":
 
     print(f"\nResults found: {len(results)}")
 
-    for i, (doc, score) in enumerate(results, 1):
+    for i, (doc, score) in enumerate(
+        results,
+        1,
+    ):
         print(f"\n--- Result {i} ---")
         print(f"Score  : {score:.4f}")
-        print(f"Source : {doc.metadata.get('source')}")
+        print(
+            f"Source : {doc.metadata.get('source')}"
+        )
         print(doc.page_content[:500])
