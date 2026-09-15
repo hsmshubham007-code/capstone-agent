@@ -1,7 +1,7 @@
 from app.approval import (
+    approve_request,
     create_approval_request,
     get_pending_approvals,
-    approve_request,
 )
 
 

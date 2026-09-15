@@ -2,11 +2,7 @@ import asyncio
 import statistics
 import time
 
-from app.async_tools import (
-    run_tools_sequential,
-    run_tools_parallel
-)
-
+from app.async_tools import run_tools_parallel, run_tools_sequential
 
 # ============================================================
 # TEST QUERIES
@@ -17,7 +13,7 @@ QUERIES = [
     "What are the acceptable use rules for company IT systems?",
     "What are the company policies for employees?",
     "What are the rules regarding workplace behavior?",
-    "What are the company's information security requirements?"
+    "What are the company's information security requirements?",
 ]
 
 
@@ -29,7 +25,7 @@ async def benchmark_sequential(query):
 
     start = time.perf_counter()
 
-    result = await run_tools_sequential(query)
+    await run_tools_sequential(query)
 
     latency = time.perf_counter() - start
 
@@ -44,7 +40,7 @@ async def benchmark_parallel(query):
 
     start = time.perf_counter()
 
-    result = await run_tools_parallel(query)
+    await run_tools_parallel(query)
 
     latency = time.perf_counter() - start
 
@@ -217,4 +213,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-

@@ -1,8 +1,8 @@
 from app.approval import (
-    create_approval_request,
     approve_request,
-    reject_request,
+    create_approval_request,
     execute_approved_request,
+    reject_request,
 )
 
 
@@ -91,7 +91,7 @@ try:
     print("Final status:")
     print(result["approval"]["status"])
 
-except Exception as error:
+except (KeyError, ValueError, RuntimeError) as error:
 
     print("❌ FAILURE")
     print(error)
