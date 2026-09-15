@@ -1,15 +1,16 @@
+import re
 import time
 from typing import Literal
 
 from langgraph.graph import END, START, StateGraph
 
+from app import tools
 from app.approval import create_approval_request
 from app.audit import record_tool_call
 from app.checkpoint import checkpointer
 from app.router import decide_tool
 from app.safety import requires_approval
 from app.state import AgentState
-from app import tools
 
 
 def router_node(state: AgentState):
@@ -60,8 +61,6 @@ def approval_node(state: AgentState):
     # -------------------------------------------------
 
     if tool_name == "update_employee_record":
-        import re
-
         employee_match = re.search(
             r"employee\s+(EMP\d+)",
             question,
@@ -147,6 +146,16 @@ def approval_node(state: AgentState):
 def search_node(state: AgentState):
     start = time.perf_counter()
 
+    # IMPORTANT:
+    # Import the tools module instead of importing
+    # search_documents_tool directly.
+    #
+    # This allows tests to monkeypatch:
+    # app.tools.search_documents_tool
+    #
+    # and prevents CI tests from accidentally calling
+    # the real Chroma/Groq services.
+
     result = tools.search_documents_tool(
         question=state["question"],
         history=state["conversation_history"],
@@ -174,7 +183,10 @@ def search_node(state: AgentState):
 
 def no_tool_node(state: AgentState):
     return {
-        "answer": "I don't have a tool that can answer this question.",
+        "answer": (
+            "I don't have a tool that can answer "
+            "this question."
+        ),
         "sources": [],
         "tools_used": [],
         "trace": state["trace"]
