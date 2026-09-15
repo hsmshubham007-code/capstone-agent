@@ -23,7 +23,7 @@ def create_test_request(request_id="safety-test-001"):
 def test_pending_request_cannot_execute():
     approval = create_test_request()
 
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         execute_approved_request(approval["approval_id"])
 
 
@@ -34,7 +34,7 @@ def test_rejected_request_cannot_execute():
 
     assert rejected["status"] == "REJECTED"
 
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         execute_approved_request(approval["approval_id"])
 
 
