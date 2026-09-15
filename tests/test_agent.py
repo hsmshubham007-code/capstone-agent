@@ -9,14 +9,56 @@ def mock_llm(monkeypatch):
     def fake_generate_answer(question, context):
         return (
             "The company expects professional conduct from all employees. "
-        "Employees must understand and follow applicable policies and "
-        "procedures. Harassment, discrimination, bullying, threats, "
-        "violence, and inappropriate workplace behavior are not tolerated."
+            "Employees must understand and follow applicable policies and "
+            "procedures. Harassment, discrimination, bullying, threats, "
+            "violence, and inappropriate workplace behavior are not tolerated."
         )
 
     monkeypatch.setattr(
         "app.rag.generate_answer",
         fake_generate_answer,
+    )
+
+
+@pytest.fixture(autouse=True)
+def mock_retrieval(monkeypatch):
+    fake_results = [
+        {
+            "source": "company_policy.pdf",
+            "score": 0.95,
+            "content": (
+                "Employees are expected to act professionally, "
+                "treat others with respect, and follow company policies."
+            ),
+        },
+        {
+            "source": "hr_policy.pdf",
+            "score": 0.91,
+            "content": (
+                "Harassment, discrimination, bullying, threats, "
+                "violence, and inappropriate workplace behavior "
+                "are not tolerated."
+            ),
+        },
+    ]
+
+    def fake_search_documents(question, k=3):
+        return fake_results[:k]
+
+    monkeypatch.setattr(
+        "app.tools.search_documents_tool",
+        lambda question, history=None, request_id=None: {
+            "name": "search_documents",
+            "answer": (
+                "The company expects professional conduct from "
+                "all employees."
+            ),
+            "sources": [
+                "company_policy.pdf",
+                "hr_policy.pdf",
+            ],
+            "results": fake_search_documents(question),
+        },
     )
 
 
@@ -68,12 +110,14 @@ def test_agent_returns_structured_state():
     assert "sources" in result
     assert "tools_used" in result
 
+
 def test_agent_records_tools_used():
     result = run_agent(
         "What does the company say about professional conduct?"
     )
 
-    assert result["tools_used"] == ["search_documents"] 
+    assert result["tools_used"] == ["search_documents"]
+
 
 def test_empty_input_is_rejected():
     try:
@@ -114,6 +158,7 @@ def test_normal_question_still_works():
     assert result["tools_used"] == ["search_documents"]
     assert len(result["sources"]) > 0
 
+
 def test_search_tool_returns_name():
     from app.tools import search_documents_tool
 
@@ -124,17 +169,18 @@ def test_search_tool_returns_name():
     assert result["name"] == "search_documents"
     assert result["answer"]
 
+
 def test_conversation_memory():
     session_id = "memory_test"
 
     first = run_agent(
         "What does the company say about professional conduct?",
-        session_id
+        session_id,
     )
 
     second = run_agent(
         "Tell me that again.",
-        session_id
+        session_id,
     )
 
     assert first["answer"]
@@ -146,38 +192,40 @@ def test_conversation_memory():
     assert history[0]["role"] == "user"
     assert history[1]["role"] == "assistant"
     assert history[2]["role"] == "user"
-    assert history[3]["role"] == "assistant"    
+    assert history[3]["role"] == "assistant"
+
 
 def test_followup_question_uses_memory():
     session_id = "followup_test"
 
     first = run_agent(
         "What does the company say about professional conduct?",
-        session_id
+        session_id,
     )
 
     second = run_agent(
         "Tell me that again.",
-        session_id
+        session_id,
     )
 
     assert first["tool"] == "search_documents"
     assert second["tool"] == "search_documents"
     assert second["tools_used"] == ["search_documents"]
     assert len(second["sources"]) > 0
-    assert second["answer"]    
+    assert second["answer"]
+
 
 def test_followup_returns_relevant_answer():
     session_id = "answer_memory_test"
 
     first = run_agent(
         "What does the company say about professional conduct?",
-        session_id
+        session_id,
     )
 
     second = run_agent(
         "Tell me that again.",
-        session_id
+        session_id,
     )
 
     assert first["tool"] == "search_documents"
@@ -189,7 +237,8 @@ def test_followup_returns_relevant_answer():
     assert (
         "professional" in answer
         or "conduct" in answer
-    )    
+    )
+
 
 def test_agent_returns_trace():
     result = run_agent(
@@ -199,7 +248,8 @@ def test_agent_returns_trace():
     assert "trace" in result
     assert len(result["trace"]) >= 2
     assert result["trace"][0]["step"] == "router"
-    assert result["trace"][1]["step"] == "search_documents"    
+    assert result["trace"][1]["step"] == "search_documents"
+
 
 def test_trace_contains_duration():
     result = run_agent(
@@ -210,7 +260,8 @@ def test_trace_contains_duration():
 
     for step in result["trace"]:
         assert "duration" in step
-        assert step["duration"] >= 0    
+        assert step["duration"] >= 0
+
 
 def test_trace_contains_retrieval_results():
     result = run_agent(
@@ -218,7 +269,8 @@ def test_trace_contains_retrieval_results():
     )
 
     search_step = next(
-        step for step in result["trace"]
+        step
+        for step in result["trace"]
         if step["step"] == "search_documents"
     )
 
@@ -228,4 +280,4 @@ def test_trace_contains_retrieval_results():
     for item in search_step["results"]:
         assert "source" in item
         assert "score" in item
-        assert "content" in item        
+        assert "content" in item
