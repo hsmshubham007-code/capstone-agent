@@ -1,23 +1,13 @@
 from app.safety import requires_approval
 
 
-def main():
-
-    tests = [
-        "search_documents",
-        "update_employee_record",
-        "delete_employee_record",
-        "send_email",
-    ]
-
-    for tool in tests:
-
-        print(
-            f"{tool}: "
-            f"approval_required="
-            f"{requires_approval(tool)}"
-        )
+def test_search_documents_does_not_require_approval():
+    assert requires_approval("search_documents") is False
 
 
-if __name__ == "__main__":
-    main()
+def test_update_employee_record_requires_approval():
+    assert requires_approval("update_employee_record") is True
+
+
+def test_send_email_requires_approval():
+    assert requires_approval("send_email") is True

@@ -1,3 +1,5 @@
+import pytest
+
 from app.approval import (
     approve_request,
     create_approval_request,
@@ -6,9 +8,9 @@ from app.approval import (
 )
 
 
-def create_test_request():
+def create_test_request(request_id="safety-test-001"):
     return create_approval_request(
-        request_id="safety-test-001",
+        request_id=request_id,
         tool_name="update_employee_record",
         arguments={
             "employee_id": "EMP102",
@@ -18,85 +20,31 @@ def create_test_request():
     )
 
 
-print("\n========================================")
-print("TEST 1: PENDING REQUEST")
-print("========================================")
+def test_pending_request_cannot_execute():
+    approval = create_test_request()
 
-approval = create_test_request()
-
-print("Status:", approval["status"])
-
-try:
-    execute_approved_request(
-        approval["approval_id"]
-    )
-
-    print("❌ SECURITY FAILURE")
-    print("Pending request was executed!")
-
-except ValueError as error:
-
-    print("✅ PASS")
-    print("Execution blocked:")
-    print(error)
+    with pytest.raises(Exception):
+        execute_approved_request(approval["approval_id"])
 
 
-print("\n========================================")
-print("TEST 2: REJECTED REQUEST")
-print("========================================")
+def test_rejected_request_cannot_execute():
+    approval = create_test_request("safety-test-rejected")
 
-approval = create_test_request()
+    rejected = reject_request(approval["approval_id"])
 
-rejected = reject_request(
-    approval["approval_id"]
-)
+    assert rejected["status"] == "REJECTED"
 
-print("Status:", rejected["status"])
-
-try:
-    execute_approved_request(
-        approval["approval_id"]
-    )
-
-    print("❌ SECURITY FAILURE")
-    print("Rejected request was executed!")
-
-except ValueError as error:
-
-    print("✅ PASS")
-    print("Execution blocked:")
-    print(error)
+    with pytest.raises(Exception):
+        execute_approved_request(approval["approval_id"])
 
 
-print("\n========================================")
-print("TEST 3: APPROVED REQUEST")
-print("========================================")
+def test_approved_request_can_execute():
+    approval = create_test_request("safety-test-approved")
 
-approval = create_test_request()
+    approved = approve_request(approval["approval_id"])
 
-approved = approve_request(
-    approval["approval_id"]
-)
+    assert approved["status"] == "APPROVED"
 
-print("Status:", approved["status"])
+    result = execute_approved_request(approval["approval_id"])
 
-try:
-
-    result = execute_approved_request(
-        approval["approval_id"]
-    )
-
-    print("✅ PASS")
-    print("Tool executed successfully.")
-    print("Final status:")
-    print(result["approval"]["status"])
-
-except (KeyError, ValueError, RuntimeError) as error:
-
-    print("❌ FAILURE")
-    print(error)
-
-
-print("\n========================================")
-print("SAFETY TEST COMPLETE")
-print("========================================")
+    assert result["approval"]["status"] == "EXECUTED"
