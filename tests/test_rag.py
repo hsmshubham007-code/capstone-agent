@@ -105,6 +105,14 @@ def test_no_sources_for_irrelevant_question(monkeypatch):
         lambda question, k=3: [],
     )
 
+    monkeypatch.setattr(
+        rag,
+        "generate_answer",
+        lambda question, context: (
+            "I don't have enough information in the provided documents."
+        ),
+    )
+
     result = rag.answer_question(
         "What is the company's stock price today?"
     )
@@ -117,6 +125,14 @@ def test_no_hallucination(monkeypatch):
         rag,
         "search_documents",
         lambda question, k=3: [],
+    )
+
+    monkeypatch.setattr(
+        rag,
+        "generate_answer",
+        lambda question, context: (
+            "I don't have enough information in the provided documents."
+        ),
     )
 
     result = rag.answer_question(
