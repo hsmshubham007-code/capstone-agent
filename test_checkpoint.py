@@ -1,67 +1,60 @@
+import pytest
+
 from app.graph import graph
 
 
-initial_state = {
-    "session_id": "checkpoint-test",
-    "question": "What are the rules for professional conduct?",
-    "conversation_history": [],
-    "tool": "",
-    "answer": "",
-    "sources": [],
-    "tools_used": [],
-    "trace": []
-}
-
-
-config = {
-    "configurable": {
-        "thread_id": "demo-thread-001"
+@pytest.fixture
+def checkpoint_state():
+    return {
+        "session_id": "checkpoint-test",
+        "question": "What are the rules for professional conduct?",
+        "conversation_history": [],
+        "tool": "",
+        "answer": "",
+        "sources": [],
+        "tools_used": [],
+        "trace": [],
     }
-}
 
 
-print("=" * 70)
-print("RUNNING LANGGRAPH WITH DURABLE CHECKPOINTING")
-print("=" * 70)
+def test_durable_checkpointing(checkpoint_state, monkeypatch):
+    def fake_generate_answer(question, context):
+        return (
+            "The company expects professional conduct, "
+            "respect, honesty, transparency, confidentiality, "
+            "and compliance with applicable policies."
+        )
 
+    monkeypatch.setattr(
+        "app.rag.generate_answer",
+        fake_generate_answer,
+    )
 
-result = graph.invoke(
-    initial_state,
-    config=config
-)
+    config = {
+        "configurable": {
+            "thread_id": "demo-thread-001"
+        }
+    }
 
+    result = graph.invoke(
+        checkpoint_state,
+        config=config,
+    )
 
-print("\nANSWER")
-print("-" * 70)
+    assert result["answer"]
+    assert "search_documents" in result["tools_used"]
 
-print(result["answer"])
+    checkpoint = graph.get_state(config)
 
+    assert (
+        checkpoint.config["configurable"]["thread_id"]
+        == "demo-thread-001"
+    )
 
-print("\nTOOLS USED")
-print("-" * 70)
+    assert checkpoint.values["question"] == (
+        "What are the rules for professional conduct?"
+    )
 
-for tool in result["tools_used"]:
-    print("-", tool)
-
-
-print("\nSOURCES")
-print("-" * 70)
-
-for source in result["sources"]:
-    print("-", source)
-
-
-print("\nTRACE")
-print("-" * 70)
-
-for step in result["trace"]:
-    print(step)
-
-
-print("\nCHECKPOINT THREAD")
-print("-" * 70)
-
-print(config["configurable"]["thread_id"])
-
-
-print("\nCHECKPOINTING TEST COMPLETE")
+    assert checkpoint.values["answer"]
+    assert checkpoint.values["sources"]
+    assert checkpoint.values["trace"]

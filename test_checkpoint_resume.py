@@ -1,105 +1,66 @@
+
 from app.graph import graph
 
 
-THREAD_ID = "resume-test-001"
+def test_checkpoint_resume(monkeypatch):
+    def fake_generate_answer(question, context):
+        return (
+            "The company expects professional conduct, "
+            "respect, honesty, transparency, confidentiality, "
+            "and compliance with applicable policies."
+        )
 
+    monkeypatch.setattr(
+        "app.rag.generate_answer",
+        fake_generate_answer,
+    )
 
-config = {
-    "configurable": {
-        "thread_id": THREAD_ID
+    thread_id = "resume-test-001"
+
+    config = {
+        "configurable": {
+            "thread_id": thread_id
+        }
     }
-}
 
+    initial_state = {
+        "session_id": thread_id,
+        "question": "What are the rules for professional conduct?",
+        "conversation_history": [],
+        "tool": "",
+        "answer": "",
+        "sources": [],
+        "tools_used": [],
+        "trace": [],
+    }
 
-print("=" * 70)
-print("CHECKPOINT RESUME TEST")
-print("=" * 70)
+    # First execution
+    result = graph.invoke(
+        initial_state,
+        config=config,
+    )
 
+    assert result["answer"]
 
-# --------------------------------------------------
-# 1. First run
-# --------------------------------------------------
+    # Read persisted checkpoint
+    checkpoint = graph.get_state(config)
 
-initial_state = {
-    "session_id": THREAD_ID,
-    "question": "What are the rules for professional conduct?",
-    "conversation_history": [],
-    "tool": "",
-    "answer": "",
-    "sources": [],
-    "tools_used": [],
-    "trace": []
-}
+    assert (
+        checkpoint.config["configurable"]["thread_id"]
+        == thread_id
+    )
 
+    assert checkpoint.values["question"] == (
+        "What are the rules for professional conduct?"
+    )
 
-print("\n1. Running first execution...")
+    assert checkpoint.values["answer"]
+    assert checkpoint.values["sources"]
+    assert checkpoint.values["trace"]
 
-result = graph.invoke(
-    initial_state,
-    config=config
-)
+    # Verify state can be read again from the same thread.
+    resumed_checkpoint = graph.get_state(config)
 
-
-print("\nFirst execution completed.")
-
-print("\nAnswer:")
-print(result["answer"])
-
-
-# --------------------------------------------------
-# 2. Read persisted checkpoint
-# --------------------------------------------------
-
-print("\n" + "=" * 70)
-print("2. READING PERSISTED CHECKPOINT")
-print("=" * 70)
-
-
-checkpoint = graph.get_state(config)
-
-
-print("\nThread ID:")
-print(
-    checkpoint.config["configurable"]["thread_id"]
-)
-
-
-print("\nCheckpoint ID:")
-print(
-    checkpoint.config["configurable"]["checkpoint_id"]
-)
-
-
-print("\nPersisted question:")
-print(
-    checkpoint.values["question"]
-)
-
-
-print("\nPersisted tool:")
-print(
-    checkpoint.values["tool"]
-)
-
-
-print("\nPersisted answer exists:")
-print(
-    bool(checkpoint.values["answer"])
-)
-
-
-print("\nPersisted sources:")
-print(
-    checkpoint.values["sources"]
-)
-
-
-print("\nPersisted trace:")
-
-for step in checkpoint.values["trace"]:
-    print(step)
-
-
-print("\n" + "=" * 70)
-print("CHECKPOINT RESUME TEST PASSED")
-print("=" * 70)
+    assert resumed_checkpoint.values["answer"] == (
+        checkpoint.values["answer"]
+    )
