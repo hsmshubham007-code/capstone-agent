@@ -1,9 +1,8 @@
 from app.approval import (
-    create_approval_request,
     approve_request,
+    create_approval_request,
     execute_approved_request,
 )
-
 
 print("\n1. Creating approval request...")
 

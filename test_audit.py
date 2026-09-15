@@ -1,7 +1,7 @@
 from app.audit import (
     create_request_id,
-    record_tool_call,
     get_request_events,
+    record_tool_call,
 )
 
 

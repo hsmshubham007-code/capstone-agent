@@ -2,8 +2,8 @@
 import asyncio
 
 from app.async_tools import (
-    run_tools_sequential,
     run_tools_parallel,
+    run_tools_sequential,
 )
 
 
