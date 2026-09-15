@@ -18,16 +18,31 @@ def checkpoint_state():
 
 
 def test_durable_checkpointing(checkpoint_state, monkeypatch):
-    def fake_generate_answer(question, context):
-        return (
-            "The company expects professional conduct, "
-            "respect, honesty, transparency, confidentiality, "
-            "and compliance with applicable policies."
-        )
+    def fake_search_documents_tool(
+        question,
+        history=None,
+        request_id=None,
+    ):
+        return {
+            "name": "search_documents",
+            "answer": (
+                "The company expects professional conduct, "
+                "respect, honesty, transparency, confidentiality, "
+                "and compliance with applicable policies."
+            ),
+            "sources": ["company_policy.pdf"],
+            "results": [
+                {
+                    "source": "company_policy.pdf",
+                    "score": 0.1,
+                    "content": "Professional conduct policy.",
+                }
+            ],
+        }
 
     monkeypatch.setattr(
-        "app.rag.generate_answer",
-        fake_generate_answer,
+        "app.tools.search_documents_tool",
+        fake_search_documents_tool,
     )
 
     config = {

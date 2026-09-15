@@ -2,6 +2,17 @@ from app import llm
 
 
 def test_generate_answer(monkeypatch):
+    # Fake configuration so the test does not need a real Groq API key.
+    monkeypatch.setenv(
+        "GROQ_API_KEY",
+        "test-key",
+    )
+
+    monkeypatch.setenv(
+        "GROQ_MODEL",
+        "test-model",
+    )
+
     class FakeMessage:
         content = (
             "The company expects professional conduct, "
@@ -35,6 +46,7 @@ def test_generate_answer(monkeypatch):
         def __init__(self):
             self.chat = FakeChat()
 
+    # Replace the real Groq client with our fake client.
     monkeypatch.setattr(
         llm,
         "get_client",

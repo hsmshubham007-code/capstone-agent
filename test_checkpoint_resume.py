@@ -1,18 +1,32 @@
-
 from app.graph import graph
 
 
 def test_checkpoint_resume(monkeypatch):
-    def fake_generate_answer(question, context):
-        return (
-            "The company expects professional conduct, "
-            "respect, honesty, transparency, confidentiality, "
-            "and compliance with applicable policies."
-        )
+    def fake_search_documents_tool(
+        question,
+        history=None,
+        request_id=None,
+    ):
+        return {
+            "name": "search_documents",
+            "answer": (
+                "The company expects professional conduct, "
+                "respect, honesty, transparency, confidentiality, "
+                "and compliance with applicable policies."
+            ),
+            "sources": ["company_policy.pdf"],
+            "results": [
+                {
+                    "source": "company_policy.pdf",
+                    "score": 0.1,
+                    "content": "Professional conduct policy.",
+                }
+            ],
+        }
 
     monkeypatch.setattr(
-        "app.rag.generate_answer",
-        fake_generate_answer,
+        "app.tools.search_documents_tool",
+        fake_search_documents_tool,
     )
 
     thread_id = "resume-test-001"
@@ -34,7 +48,6 @@ def test_checkpoint_resume(monkeypatch):
         "trace": [],
     }
 
-    # First execution
     result = graph.invoke(
         initial_state,
         config=config,
@@ -42,7 +55,6 @@ def test_checkpoint_resume(monkeypatch):
 
     assert result["answer"]
 
-    # Read persisted checkpoint
     checkpoint = graph.get_state(config)
 
     assert (
@@ -58,9 +70,9 @@ def test_checkpoint_resume(monkeypatch):
     assert checkpoint.values["sources"]
     assert checkpoint.values["trace"]
 
-    # Verify state can be read again from the same thread.
     resumed_checkpoint = graph.get_state(config)
 
-    assert resumed_checkpoint.values["answer"] == (
-        checkpoint.values["answer"]
+    assert (
+        resumed_checkpoint.values["answer"]
+        == checkpoint.values["answer"]
     )
