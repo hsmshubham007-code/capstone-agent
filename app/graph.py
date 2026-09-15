@@ -9,11 +9,10 @@ from app.checkpoint import checkpointer
 from app.router import decide_tool
 from app.safety import requires_approval
 from app.state import AgentState
-from app.tools import search_documents_tool
+from app import tools
 
 
 def router_node(state: AgentState):
-
     start = time.perf_counter()
 
     tool = decide_tool(
@@ -22,7 +21,6 @@ def router_node(state: AgentState):
     )
 
     duration = time.perf_counter() - start
-
     request_id = state.get("request_id")
 
     if request_id:
@@ -41,7 +39,8 @@ def router_node(state: AgentState):
 
     return {
         "tool": tool,
-        "trace": state["trace"] + [
+        "trace": state["trace"]
+        + [
             {
                 "step": "router",
                 "tool": tool,
@@ -52,10 +51,8 @@ def router_node(state: AgentState):
 
 
 def approval_node(state: AgentState):
-
     request_id = state["request_id"]
     tool_name = state["tool"]
-
     question = state["question"]
 
     # -------------------------------------------------
@@ -63,7 +60,6 @@ def approval_node(state: AgentState):
     # -------------------------------------------------
 
     if tool_name == "update_employee_record":
-
         import re
 
         employee_match = re.search(
@@ -97,7 +93,6 @@ def approval_node(state: AgentState):
         }
 
     else:
-
         arguments = {
             "question": question,
         }
@@ -136,7 +131,8 @@ def approval_node(state: AgentState):
         "approval_status": "PENDING",
         "sources": [],
         "tools_used": [],
-        "trace": state["trace"] + [
+        "trace": state["trace"]
+        + [
             {
                 "step": "approval_required",
                 "tool": tool_name,
@@ -148,12 +144,10 @@ def approval_node(state: AgentState):
     }
 
 
-
 def search_node(state: AgentState):
-
     start = time.perf_counter()
 
-    result = search_documents_tool(
+    result = tools.search_documents_tool(
         question=state["question"],
         history=state["conversation_history"],
         request_id=state.get("request_id"),
@@ -165,7 +159,8 @@ def search_node(state: AgentState):
         "answer": result["answer"],
         "sources": result["sources"],
         "tools_used": [result["name"]],
-        "trace": state["trace"] + [
+        "trace": state["trace"]
+        + [
             {
                 "step": "search_documents",
                 "tool": result["name"],
@@ -178,12 +173,12 @@ def search_node(state: AgentState):
 
 
 def no_tool_node(state: AgentState):
-
     return {
         "answer": "I don't have a tool that can answer this question.",
         "sources": [],
         "tools_used": [],
-        "trace": state["trace"] + [
+        "trace": state["trace"]
+        + [
             {
                 "step": "no_tool",
                 "tool": "no_tool",
@@ -200,7 +195,6 @@ def route_after_router(
     "approval",
     "no_tool",
 ]:
-
     tool = state["tool"]
 
     if tool == "search_documents":
@@ -213,7 +207,6 @@ def route_after_router(
 
 
 builder = StateGraph(AgentState)
-
 
 builder.add_node(
     "router",
@@ -235,12 +228,10 @@ builder.add_node(
     no_tool_node,
 )
 
-
 builder.add_edge(
     START,
     "router",
 )
-
 
 builder.add_conditional_edges(
     "router",
@@ -251,7 +242,6 @@ builder.add_conditional_edges(
         "no_tool": "no_tool",
     },
 )
-
 
 builder.add_edge(
     "search",
@@ -267,7 +257,6 @@ builder.add_edge(
     "no_tool",
     END,
 )
-
 
 graph = builder.compile(
     checkpointer=checkpointer,
