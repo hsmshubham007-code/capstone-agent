@@ -1,4 +1,4 @@
-fastapi
+﻿fastapi
 uvicorn[standard]
 openai
 python-dotenv
@@ -7,9 +7,13 @@ langgraph
 langgraph-checkpoint-sqlite
 
 langchain-chroma
-langchain-huggingface
+langchain-huggingface==1.2.2
 langchain-community
 
 chromadb
 sentence-transformers
 pypdf
+
+streamlit
+pandas
+requests

@@ -31,7 +31,4 @@ services:
 
 volumes:
   chroma_data:
-    external: true
-
   checkpoint_data:
-    external: true
