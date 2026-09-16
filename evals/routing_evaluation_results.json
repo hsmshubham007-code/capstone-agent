@@ -1,0 +1,148 @@
+{
+  "total": 7,
+  "passed": 7,
+  "pass_rate": 1.0,
+  "category_results": {
+    "HR": {
+      "total": 2,
+      "passed": 2
+    },
+    "Company": {
+      "total": 1,
+      "passed": 1
+    },
+    "IT": {
+      "total": 1,
+      "passed": 1
+    },
+    "Out-of-scope": {
+      "total": 3,
+      "passed": 3
+    }
+  },
+  "latency": {
+    "average_ms": 3156.653228565119,
+    "p50_ms": 1037.170299969148,
+    "p95_ms": 18854.764199990314
+  },
+  "results": [
+    {
+      "id": "hr_001",
+      "category": "HR",
+      "question": "What is the company leave policy?",
+      "expected_tool": "search_documents",
+      "actual_tool": "search_documents",
+      "tool_correct": true,
+      "expected_sources": [
+        "hr_policy.pdf"
+      ],
+      "actual_sources": [
+        "hr_policy.pdf"
+      ],
+      "source_correct": true,
+      "answer_correct": true,
+      "passed": true,
+      "latency_ms": 18854.764199990314
+    },
+    {
+      "id": "hr_002",
+      "category": "HR",
+      "question": "What does the company say about professional conduct?",
+      "expected_tool": "search_documents",
+      "actual_tool": "search_documents",
+      "tool_correct": true,
+      "expected_sources": [
+        "hr_policy.pdf",
+        "company_policy.pdf"
+      ],
+      "actual_sources": [
+        "hr_policy.pdf",
+        "company_policy.pdf"
+      ],
+      "source_correct": true,
+      "answer_correct": true,
+      "passed": true,
+      "latency_ms": 1037.170299969148
+    },
+    {
+      "id": "company_001",
+      "category": "Company",
+      "question": "What are the company's confidentiality requirements?",
+      "expected_tool": "search_documents",
+      "actual_tool": "search_documents",
+      "tool_correct": true,
+      "expected_sources": [
+        "company_policy.pdf"
+      ],
+      "actual_sources": [
+        "company_policy.pdf",
+        "hr_policy.pdf",
+        "it_policy.pdf"
+      ],
+      "source_correct": true,
+      "answer_correct": true,
+      "passed": true,
+      "latency_ms": 1094.0669999690726
+    },
+    {
+      "id": "it_001",
+      "category": "IT",
+      "question": "What is the company's IT security policy?",
+      "expected_tool": "search_documents",
+      "actual_tool": "search_documents",
+      "tool_correct": true,
+      "expected_sources": [
+        "it_policy.pdf"
+      ],
+      "actual_sources": [
+        "it_policy.pdf"
+      ],
+      "source_correct": true,
+      "answer_correct": true,
+      "passed": true,
+      "latency_ms": 1048.7252000020817
+    },
+    {
+      "id": "out_001",
+      "category": "Out-of-scope",
+      "question": "What is Python?",
+      "expected_tool": "no_tool",
+      "actual_tool": "no_tool",
+      "tool_correct": true,
+      "expected_sources": [],
+      "actual_sources": [],
+      "source_correct": true,
+      "answer_correct": true,
+      "passed": true,
+      "latency_ms": 18.26070004608482
+    },
+    {
+      "id": "out_002",
+      "category": "Out-of-scope",
+      "question": "What is the company's relocation allowance policy?",
+      "expected_tool": "search_documents",
+      "actual_tool": "search_documents",
+      "tool_correct": true,
+      "expected_sources": [],
+      "actual_sources": [],
+      "source_correct": true,
+      "answer_correct": true,
+      "passed": true,
+      "latency_ms": 29.657899984158576
+    },
+    {
+      "id": "out_003",
+      "category": "Out-of-scope",
+      "question": "What is the weather today?",
+      "expected_tool": "no_tool",
+      "actual_tool": "no_tool",
+      "tool_correct": true,
+      "expected_sources": [],
+      "actual_sources": [],
+      "source_correct": true,
+      "answer_correct": true,
+      "passed": true,
+      "latency_ms": 13.927299994975328
+    }
+  ]
+}

@@ -1,9 +1,39 @@
 from app.llm import generate_answer
 from app.retrieval import search_documents
 
+NO_INFORMATION_ANSWER = (
+    "I don't have enough information in the "
+    "provided documents to answer that question."
+)
+
 
 def answer_question(question, k=3):
-    results = search_documents(question, k=k)
+    """
+    Answer a question using retrieved company documents.
+
+    If no relevant documents are retrieved, do not call the LLM.
+    Return an honest limitation instead.
+    """
+
+    results = search_documents(
+        question,
+        k=k,
+    )
+
+    # -------------------------------------------------
+    # No relevant documents found
+    # -------------------------------------------------
+
+    if not results:
+        return {
+            "answer": NO_INFORMATION_ANSWER,
+            "sources": [],
+            "results": [],
+        }
+
+    # -------------------------------------------------
+    # Build context from retrieved documents
+    # -------------------------------------------------
 
     context_parts = []
     sources = []
@@ -18,12 +48,19 @@ def answer_question(question, k=3):
 
     context = "\n\n".join(context_parts)
 
-    answer = generate_answer(question, context)
+    # -------------------------------------------------
+    # Generate answer using retrieved context
+    # -------------------------------------------------
+
+    answer = generate_answer(
+        question,
+        context,
+    )
 
     return {
         "answer": answer,
         "sources": sources,
-        "results": results
+        "results": results,
     }
 
 

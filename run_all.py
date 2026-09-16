@@ -5,7 +5,6 @@ import time
 
 import requests
 
-
 API_URL = "http://localhost:8000"
 MONITORING_URL = "http://localhost:8501"
 UI_URL = "http://localhost:8502"

@@ -12,6 +12,11 @@ from app.router import decide_tool
 from app.safety import requires_approval
 from app.state import AgentState
 
+NO_INFORMATION_ANSWER = (
+    "I don't have enough information in the "
+    "provided documents to answer that question."
+)
+
 
 def router_node(state: AgentState):
     start = time.perf_counter()
@@ -28,9 +33,7 @@ def router_node(state: AgentState):
         record_tool_call(
             request_id=request_id,
             tool_name="router",
-            arguments={
-                "question": state["question"],
-            },
+            arguments={"question": state["question"]},
             status="SUCCESS",
             outcome={
                 "selected_tool": tool,
@@ -56,10 +59,6 @@ def approval_node(state: AgentState):
     tool_name = state["tool"]
     question = state["question"]
 
-    # -------------------------------------------------
-    # Build arguments for the risky tool
-    # -------------------------------------------------
-
     if tool_name == "update_employee_record":
         employee_match = re.search(
             r"employee\s+(EMP\d+)",
@@ -74,21 +73,15 @@ def approval_node(state: AgentState):
         )
 
         if not employee_match:
-            raise ValueError(
-                "Could not identify employee ID."
-            )
+            raise ValueError("Could not identify employee ID.")
 
         if not salary_match:
-            raise ValueError(
-                "Could not identify new salary."
-            )
+            raise ValueError("Could not identify new salary.")
 
         arguments = {
             "employee_id": employee_match.group(1),
             "field": "salary",
-            "new_value": int(
-                salary_match.group(1)
-            ),
+            "new_value": int(salary_match.group(1)),
         }
 
     else:
@@ -96,19 +89,11 @@ def approval_node(state: AgentState):
             "question": question,
         }
 
-    # -------------------------------------------------
-    # Create approval request
-    # -------------------------------------------------
-
     approval = create_approval_request(
         request_id=request_id,
         tool_name=tool_name,
         arguments=arguments,
     )
-
-    # -------------------------------------------------
-    # Audit blocked tool
-    # -------------------------------------------------
 
     record_tool_call(
         request_id=request_id,
@@ -146,16 +131,6 @@ def approval_node(state: AgentState):
 def search_node(state: AgentState):
     start = time.perf_counter()
 
-    # IMPORTANT:
-    # Import the tools module instead of importing
-    # search_documents_tool directly.
-    #
-    # This allows tests to monkeypatch:
-    # app.tools.search_documents_tool
-    #
-    # and prevents CI tests from accidentally calling
-    # the real Chroma/Groq services.
-
     result = tools.search_documents_tool(
         question=state["question"],
         history=state["conversation_history"],
@@ -164,17 +139,40 @@ def search_node(state: AgentState):
 
     duration = time.perf_counter() - start
 
+    results = result.get("results", [])
+
+    # -------------------------------------------------
+    # Retrieval found relevant documents
+    # -------------------------------------------------
+
+    if results:
+        answer = result["answer"]
+        sources = result["sources"]
+
+        retrieval_status = "RELEVANT"
+
+    # -------------------------------------------------
+    # Retrieval found nothing relevant
+    # -------------------------------------------------
+
+    else:
+        answer = NO_INFORMATION_ANSWER
+        sources = []
+
+        retrieval_status = "NO_RELEVANT_RESULTS"
+
     return {
-        "answer": result["answer"],
-        "sources": result["sources"],
+        "answer": answer,
+        "sources": sources,
         "tools_used": [result["name"]],
         "trace": state["trace"]
         + [
             {
                 "step": "search_documents",
                 "tool": result["name"],
-                "sources": result["sources"],
-                "results": result["results"],
+                "sources": sources,
+                "results": results,
+                "retrieval_status": retrieval_status,
                 "duration": duration,
             }
         ],
@@ -202,11 +200,7 @@ def no_tool_node(state: AgentState):
 
 def route_after_router(
     state: AgentState,
-) -> Literal[
-    "search",
-    "approval",
-    "no_tool",
-]:
+) -> Literal["search", "approval", "no_tool"]:
     tool = state["tool"]
 
     if tool == "search_documents":
@@ -220,25 +214,10 @@ def route_after_router(
 
 builder = StateGraph(AgentState)
 
-builder.add_node(
-    "router",
-    router_node,
-)
-
-builder.add_node(
-    "search",
-    search_node,
-)
-
-builder.add_node(
-    "approval",
-    approval_node,
-)
-
-builder.add_node(
-    "no_tool",
-    no_tool_node,
-)
+builder.add_node("router", router_node)
+builder.add_node("search", search_node)
+builder.add_node("approval", approval_node)
+builder.add_node("no_tool", no_tool_node)
 
 builder.add_edge(
     START,

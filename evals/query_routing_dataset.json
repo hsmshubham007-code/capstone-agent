@@ -1,0 +1,58 @@
+[
+  {
+    "id": "hr_001",
+    "category": "HR",
+    "question": "What is the company leave policy?",
+    "expected_tool": "search_documents",
+    "expected_sources": ["hr_policy.pdf"],
+    "should_have_answer": true
+  },
+  {
+    "id": "hr_002",
+    "category": "HR",
+    "question": "What does the company say about professional conduct?",
+    "expected_tool": "search_documents",
+    "expected_sources": ["hr_policy.pdf", "company_policy.pdf"],
+    "should_have_answer": true
+  },
+  {
+    "id": "company_001",
+    "category": "Company",
+    "question": "What are the company's confidentiality requirements?",
+    "expected_tool": "search_documents",
+    "expected_sources": ["company_policy.pdf"],
+    "should_have_answer": true
+  },
+  {
+    "id": "it_001",
+    "category": "IT",
+    "question": "What is the company's IT security policy?",
+    "expected_tool": "search_documents",
+    "expected_sources": ["it_policy.pdf"],
+    "should_have_answer": true
+  },
+  {
+    "id": "out_001",
+    "category": "Out-of-scope",
+    "question": "What is Python?",
+    "expected_tool": "no_tool",
+    "expected_sources": [],
+    "should_have_answer": false
+  },
+  {
+    "id": "out_002",
+    "category": "Out-of-scope",
+    "question": "What is the company's relocation allowance policy?",
+    "expected_tool": "search_documents",
+    "expected_sources": [],
+    "should_have_answer": false
+  },
+  {
+    "id": "out_003",
+    "category": "Out-of-scope",
+    "question": "What is the weather today?",
+    "expected_tool": "no_tool",
+    "expected_sources": [],
+    "should_have_answer": false
+  }
+]

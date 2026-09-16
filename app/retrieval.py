@@ -5,20 +5,15 @@ CHROMA_DIR = "storage/chroma"
 COLLECTION_NAME = "capstone_documents"
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
+# Lower distance = more similar.
+# This is intentionally stricter than the previous 1.4 threshold.
+DEFAULT_MAX_DISTANCE = 1.10
 
 _embeddings = None
 _db = None
 
 
 def get_embeddings():
-    """
-    Create the Hugging Face embedding model lazily.
-
-    The model is not downloaded or initialized when this
-    module is imported. It is initialized only when
-    document search is actually requested.
-    """
-
     global _embeddings
 
     if _embeddings is None:
@@ -30,13 +25,6 @@ def get_embeddings():
 
 
 def get_db():
-    """
-    Create the Chroma database connection lazily.
-
-    This prevents Hugging Face model initialization during
-    pytest collection and application imports.
-    """
-
     global _db
 
     if _db is None:
@@ -52,13 +40,15 @@ def get_db():
 def search_documents(
     query,
     k=3,
-    max_distance=1.4,
+    max_distance=DEFAULT_MAX_DISTANCE,
 ):
     """
-    Search the company policy documents.
+    Search company documents and keep only sufficiently
+    similar results.
 
-    The embedding model and Chroma database are initialized
-    only when this function is actually called.
+    Chroma returns a distance score where:
+        lower = more similar
+        higher = less similar
     """
 
     db = get_db()
@@ -68,27 +58,10 @@ def search_documents(
         k=k,
     )
 
-    return [
+    filtered_results = [
         (doc, score)
         for doc, score in results
         if score <= max_distance
     ]
 
-
-if __name__ == "__main__":
-    query = input("Ask a question: ")
-
-    results = search_documents(query)
-
-    print(f"\nResults found: {len(results)}")
-
-    for i, (doc, score) in enumerate(
-        results,
-        1,
-    ):
-        print(f"\n--- Result {i} ---")
-        print(f"Score  : {score:.4f}")
-        print(
-            f"Source : {doc.metadata.get('source')}"
-        )
-        print(doc.page_content[:500])
+    return filtered_results
