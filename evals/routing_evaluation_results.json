@@ -21,9 +21,9 @@
     }
   },
   "latency": {
-    "average_ms": 3156.653228565119,
-    "p50_ms": 1037.170299969148,
-    "p95_ms": 18854.764199990314
+    "average_ms": 6152.865585704733,
+    "p50_ms": 1033.653000020422,
+    "p95_ms": 39322.95770000201
   },
   "results": [
     {
@@ -42,7 +42,7 @@
       "source_correct": true,
       "answer_correct": true,
       "passed": true,
-      "latency_ms": 18854.764199990314
+      "latency_ms": 39322.95770000201
     },
     {
       "id": "hr_002",
@@ -62,7 +62,7 @@
       "source_correct": true,
       "answer_correct": true,
       "passed": true,
-      "latency_ms": 1037.170299969148
+      "latency_ms": 1033.653000020422
     },
     {
       "id": "company_001",
@@ -82,7 +82,7 @@
       "source_correct": true,
       "answer_correct": true,
       "passed": true,
-      "latency_ms": 1094.0669999690726
+      "latency_ms": 1070.5403999891132
     },
     {
       "id": "it_001",
@@ -100,7 +100,7 @@
       "source_correct": true,
       "answer_correct": true,
       "passed": true,
-      "latency_ms": 1048.7252000020817
+      "latency_ms": 1060.9973999671638
     },
     {
       "id": "out_001",
@@ -114,7 +114,7 @@
       "source_correct": true,
       "answer_correct": true,
       "passed": true,
-      "latency_ms": 18.26070004608482
+      "latency_ms": 223.15689997049049
     },
     {
       "id": "out_002",
@@ -128,7 +128,7 @@
       "source_correct": true,
       "answer_correct": true,
       "passed": true,
-      "latency_ms": 29.657899984158576
+      "latency_ms": 221.73609997844324
     },
     {
       "id": "out_003",
@@ -142,7 +142,7 @@
       "source_correct": true,
       "answer_correct": true,
       "passed": true,
-      "latency_ms": 13.927299994975328
+      "latency_ms": 137.01760000549257
     }
   ]
 }
