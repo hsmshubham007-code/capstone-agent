@@ -39,6 +39,14 @@ jobs:
         run: |
           python app/ingest.py
 
+      - name: Verify retrieval index
+        run: |
+          python -c "from app.retrieval import get_db; print('Chroma documents:', get_db()._collection.count())"
+
+      - name: Verify leave-policy retrieval
+        run: |
+          python -c "from app.retrieval import search_documents; results = search_documents('What is the company leave policy?'); print('Retrieved documents:', len(results)); assert len(results) > 0"
+
       - name: Run tests
         run: |
           pytest -q
