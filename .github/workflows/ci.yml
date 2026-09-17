@@ -146,7 +146,7 @@ jobs:
   # --------------------------------------------------
   # 6. AI evaluation quality gate
   # --------------------------------------------------
-  evaluation-gate:
+    evaluation-gate:
     name: Evaluation Quality Gate
     runs-on: ubuntu-latest
 
