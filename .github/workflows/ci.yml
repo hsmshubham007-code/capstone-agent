@@ -43,6 +43,10 @@ jobs:
         run: |
           python -c "from app.retrieval import get_db; print('Chroma documents:', get_db()._collection.count())"
 
+      - name: Diagnose leave-policy distances
+        run: |
+          python -c "from app.retrieval import get_db; results = get_db().similarity_search_with_score('What is the company leave policy?', k=3); print('Top retrieval results:'); [print('distance=', round(score, 4), 'source=', doc.metadata.get('source')) for doc, score in results]"
+
       - name: Verify leave-policy retrieval
         run: |
           python -c "from app.retrieval import search_documents; results = search_documents('What is the company leave policy?'); print('Retrieved documents:', len(results)); assert len(results) > 0"
