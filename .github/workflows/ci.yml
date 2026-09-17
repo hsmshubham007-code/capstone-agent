@@ -11,7 +11,6 @@ on:
       - main
       - master
 
-
 jobs:
 
   # --------------------------------------------------
@@ -37,11 +36,12 @@ jobs:
           pip install pytest
 
       - name: Build retrieval index
-        run: python app/ingest.py
+        run: |
+          python app/ingest.py
 
       - name: Run tests
-        run: pytest -q
-
+        run: |
+          pytest -q
 
   # --------------------------------------------------
   # 2. Code quality
@@ -65,8 +65,8 @@ jobs:
           pip install ruff
 
       - name: Run Ruff
-        run: ruff check app tests evals *.py
-
+        run: |
+          ruff check app tests evals *.py
 
   # --------------------------------------------------
   # 3. Dependency security
@@ -98,7 +98,6 @@ jobs:
             --ignore-vuln PYSEC-2026-3814 \
             --ignore-vuln PYSEC-2026-3815
 
-
   # --------------------------------------------------
   # 4. Docker build
   # --------------------------------------------------
@@ -111,8 +110,8 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build Docker image
-        run: docker build -t company-policy-agent:ci .
-
+        run: |
+          docker build -t company-policy-agent:ci .
 
   # --------------------------------------------------
   # 5. AI safety / approval regression tests
@@ -137,16 +136,17 @@ jobs:
           pip install pytest
 
       - name: Build retrieval index
-        run: python app/ingest.py
+        run: |
+          python app/ingest.py
 
       - name: Run safety tests
-        run: pytest -q tests/test_safety.py tests/test_approval_safety.py
-
+        run: |
+          pytest -q tests/test_safety.py tests/test_approval_safety.py
 
   # --------------------------------------------------
   # 6. AI evaluation quality gate
   # --------------------------------------------------
-    evaluation-gate:
+  evaluation-gate:
     name: Evaluation Quality Gate
     runs-on: ubuntu-latest
 
@@ -165,7 +165,9 @@ jobs:
           pip install -r requirements.txt
 
       - name: Build retrieval index
-        run: python app/ingest.py
+        run: |
+          python app/ingest.py
 
       - name: Run evaluation quality gate
-        run: python evals/check_evaluation_gate.py
+        run: |
+          python evals/check_evaluation_gate.py
