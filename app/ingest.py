@@ -5,7 +5,6 @@ from langchain_community.document_loaders import PyPDFLoader
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-
 DATA_DIR = Path("data")
 CHROMA_DIR = "storage/chroma"
 COLLECTION_NAME = "capstone_documents"
