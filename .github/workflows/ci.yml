@@ -41,7 +41,7 @@ jobs:
 
       - name: Verify retrieval index
         run: |
-          python -c "from app.retrieval import get_db; print('Chroma documents:', get_db()._collection.count())"
+          python -c "from app.retrieval import get_db; db = get_db(); print('Chroma documents:', db._collection.count()); print('Chroma collection:', db._collection.name); print('Chroma path: storage/chroma')"
 
       - name: Diagnose leave-policy distances
         run: |
