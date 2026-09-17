@@ -26,9 +26,13 @@ jobs:
           pip install -r requirements.txt
           pip install pytest
 
+      - name: Build retrieval index
+        run: |
+          python app/ingest.py
+
       - name: Run unit tests
         run: |
-          pytest -q
+         pytest -q
 
       - name: Run Ruff
         run: |
