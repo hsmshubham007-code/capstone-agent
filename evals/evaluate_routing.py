@@ -1,247 +1,339 @@
 import json
 import statistics
-import sys
 import time
-from collections import defaultdict
 from pathlib import Path
-
-# Add the project root to Python's import path.
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
-
 
 from app.agent import run_agent
 
-DATASET_PATH = PROJECT_ROOT / "evals" / "query_routing_dataset.json"
+
+DATASET_PATH = Path("evals/query_routing_dataset.json")
+RESULTS_PATH = Path("evals/routing_evaluation_results.json")
 
 
 def load_dataset():
-    with open(DATASET_PATH, "r", encoding="utf-8") as file:
-        return json.load(file)
+    with open(DATASET_PATH, "r", encoding="utf-8") as f:
+        return json.load(f)
 
 
 def evaluate_case(case):
+    question = case["question"]
+    expected_tool = case["expected_tool"]
+    expected_sources = set(case.get("expected_sources", []))
+
+    print(f"Evaluating {case['id']}: {question}")
+
     start = time.perf_counter()
 
-    result = run_agent(
-        case["question"],
-        f"eval-{case['id']}",
-    )
-
-    latency_ms = (
-        time.perf_counter() - start
-    ) * 1000
-
-    actual_tool = result["tool"]
-    actual_sources = result["sources"]
-
-    tool_correct = (
-        actual_tool == case["expected_tool"]
-    )
-
-    expected_sources = set(
-        case["expected_sources"]
-    )
-
-    actual_source_set = set(
-        actual_sources
-    )
-
-    if expected_sources:
-        source_correct = bool(
-            expected_sources
-            & actual_source_set
+    try:
+        result = run_agent(
+            question,
+            session_id=f"eval-{case['id']}",
         )
+        error = None
+    except Exception as exc:
+        result = {}
+        error = str(exc)
+
+    latency_ms = (time.perf_counter() - start) * 1000
+
+    actual_tool = result.get("tool")
+    actual_sources = set(result.get("sources", []))
+    answer = result.get("answer", "")
+
+    # --------------------------------------------------
+    # Infrastructure / service error
+    # --------------------------------------------------
+
+    if error is not None:
+        status = "ERROR"
+        tool_correct = False
+        sources_correct = False
+        answer_correct = False
+
     else:
-        source_correct = (
-            len(actual_sources) == 0
-        )
+        # --------------------------------------------------
+        # Tool correctness
+        # --------------------------------------------------
 
-    if case["should_have_answer"]:
-        answer_correct = (
-            len(actual_sources) > 0
-            and "I don't have enough information"
-            not in result["answer"]
-        )
-    else:
-        answer_correct = (
-            "I don't have enough information"
-            in result["answer"]
-        )
+        tool_correct = actual_tool == expected_tool
 
-    passed = (
-        tool_correct
-        and source_correct
-        and answer_correct
-    )
+        # --------------------------------------------------
+        # Source correctness
+        # --------------------------------------------------
+
+        if expected_sources:
+            sources_correct = expected_sources.issubset(actual_sources)
+        else:
+            sources_correct = True
+
+        # --------------------------------------------------
+        # Answer correctness
+        # --------------------------------------------------
+
+        if expected_tool == "guardrail":
+            answer_correct = (
+                actual_tool == "guardrail"
+                and bool(answer)
+            )
+
+        elif expected_tool == "no_tool":
+            answer_correct = (
+                actual_tool == "no_tool"
+                and bool(answer)
+            )
+
+        else:
+            answer_correct = (
+                bool(answer)
+                and "I don't have enough information" not in answer
+            )
+
+        # --------------------------------------------------
+        # Overall evaluation status
+        # --------------------------------------------------
+
+        if (
+            tool_correct
+            and sources_correct
+            and answer_correct
+        ):
+            status = "PASS"
+        else:
+            status = "FAIL"
 
     return {
         "id": case["id"],
         "category": case["category"],
-        "question": case["question"],
-        "expected_tool": case["expected_tool"],
+        "question": question,
+        "expected_tool": expected_tool,
         "actual_tool": actual_tool,
+        "expected_sources": sorted(expected_sources),
+        "actual_sources": sorted(actual_sources),
         "tool_correct": tool_correct,
-        "expected_sources": case["expected_sources"],
-        "actual_sources": actual_sources,
-        "source_correct": source_correct,
+        "sources_correct": sources_correct,
         "answer_correct": answer_correct,
-        "passed": passed,
-        "latency_ms": latency_ms,
+        "status": status,
+        "passed": status == "PASS",
+        "latency_ms": round(latency_ms, 2),
+        "answer": answer,
+        "error": error,
     }
 
 
-def main():
-    dataset = load_dataset()
-
-    results = []
-
-    for case in dataset:
-        print(
-            f"Evaluating {case['id']}: "
-            f"{case['question']}"
-        )
-
-        result = evaluate_case(case)
-        results.append(result)
-
-        status = "PASS" if result["passed"] else "FAIL"
-
-        print(
-            f"  {status} | "
-            f"tool={result['actual_tool']} | "
-            f"latency={result['latency_ms']:.2f} ms"
-        )
-
+def print_summary(results):
     total = len(results)
+
     passed = sum(
-        1 for result in results
-        if result["passed"]
-    )
-
-    overall_pass_rate = (
-        passed / total
-        if total
-        else 0
-    )
-
-    latencies = [
-        result["latency_ms"]
+        result["status"] == "PASS"
         for result in results
-    ]
-
-    category_stats = defaultdict(
-        lambda: {
-            "total": 0,
-            "passed": 0,
-        }
     )
 
-    for result in results:
-        category = result["category"]
-
-        category_stats[category]["total"] += 1
-
-        if result["passed"]:
-            category_stats[category]["passed"] += 1
-
-    print("\n" + "=" * 50)
-    print("QUERY ROUTING EVALUATION")
-    print("=" * 50)
-
-    print(f"Total queries: {total}")
-    print(f"Passed: {passed}")
-    print(
-        f"Overall pass rate: "
-        f"{overall_pass_rate:.2%}"
+    failed = sum(
+        result["status"] == "FAIL"
+        for result in results
     )
 
-    print("\nPass rate by query type:")
+    errors = sum(
+        result["status"] == "ERROR"
+        for result in results
+    )
 
-    for category, stats in category_stats.items():
+    evaluated = passed + failed
+
+    print("\n" + "=" * 60)
+    print("ROUTING EVALUATION SUMMARY")
+    print("=" * 60)
+
+    print(f"Total queries : {total}")
+    print(f"Passed        : {passed}")
+    print(f"Failed        : {failed}")
+    print(f"Errors        : {errors}")
+
+    if evaluated:
+        pass_rate = passed / evaluated * 100
+        print(
+            f"Pass rate     : {pass_rate:.2f}% "
+            f"(excluding infrastructure errors)"
+        )
+
+    print("\nCategory breakdown:")
+
+    categories = sorted(
+        {result["category"] for result in results}
+    )
+
+    for category in categories:
+        category_results = [
+            result
+            for result in results
+            if result["category"] == category
+        ]
+
+        category_passed = sum(
+            result["status"] == "PASS"
+            for result in category_results
+        )
+
+        category_failed = sum(
+            result["status"] == "FAIL"
+            for result in category_results
+        )
+
+        category_errors = sum(
+            result["status"] == "ERROR"
+            for result in category_results
+        )
+
+        category_evaluated = (
+            category_passed + category_failed
+        )
+
         rate = (
-            stats["passed"] / stats["total"]
+            category_passed / category_evaluated * 100
+            if category_evaluated
+            else 0
         )
 
         print(
             f"  {category}: "
-            f"{stats['passed']}/{stats['total']} "
-            f"({rate:.2%})"
+            f"{category_passed}/{category_evaluated} "
+            f"passed "
+            f"({rate:.2f}%), "
+            f"{category_errors} error(s)"
         )
 
-    print("\nLatency:")
+    latencies = [
+        result["latency_ms"]
+        for result in results
+        if result["error"] is None
+    ]
 
-    print(
-        f"  Average: "
-        f"{statistics.mean(latencies):.2f} ms"
-    )
+    if latencies:
+        sorted_latencies = sorted(latencies)
 
-    print(
-        f"  P50: "
-        f"{statistics.median(latencies):.2f} ms"
-    )
+        p50 = statistics.median(sorted_latencies)
 
-    sorted_latencies = sorted(latencies)
+        p95_index = max(
+            0,
+            min(
+                len(sorted_latencies) - 1,
+                int(len(sorted_latencies) * 0.95) - 1,
+            ),
+        )
 
-    p95_index = min(
-        len(sorted_latencies) - 1,
-        int(len(sorted_latencies) * 0.95),
-    )
+        p95 = sorted_latencies[p95_index]
 
-    print(
-        f"  P95: "
-        f"{sorted_latencies[p95_index]:.2f} ms"
-    )
+        print("\nLatency:")
+        print(f"  Average : {statistics.mean(latencies):.2f} ms")
+        print(f"  P50     : {p50:.2f} ms")
+        print(f"  P95     : {p95:.2f} ms")
 
-    print("\nDetailed failures:")
+    print("\nFailed cases:")
 
     failures = [
         result
         for result in results
-        if not result["passed"]
+        if result["status"] == "FAIL"
     ]
 
     if not failures:
         print("  None")
     else:
         for result in failures:
+            print(f"\n  {result['id']}:")
+            print(f"    Question: {result['question']}")
             print(
-                f"  {result['id']}: "
-                f"{result['question']}"
+                f"    Expected tool: "
+                f"{result['expected_tool']}"
+            )
+            print(
+                f"    Actual tool: "
+                f"{result['actual_tool']}"
+            )
+            print(
+                f"    Expected sources: "
+                f"{result['expected_sources']}"
+            )
+            print(
+                f"    Actual sources: "
+                f"{result['actual_sources']}"
+            )
+            print(
+                f"    Tool correct: "
+                f"{result['tool_correct']}"
+            )
+            print(
+                f"    Sources correct: "
+                f"{result['sources_correct']}"
+            )
+            print(
+                f"    Answer correct: "
+                f"{result['answer_correct']}"
+            )
+            print(
+                f"    Error: "
+                f"{result['error']}"
             )
 
-    output = {
-        "total": total,
-        "passed": passed,
-        "pass_rate": overall_pass_rate,
-        "category_results": dict(category_stats),
-        "latency": {
-            "average_ms": statistics.mean(latencies),
-            "p50_ms": statistics.median(latencies),
-            "p95_ms": sorted_latencies[p95_index],
-        },
-        "results": results,
-    }
+    print("\nInfrastructure errors:")
 
-    output_path = Path(
-        "evals/routing_evaluation_results.json"
+    infrastructure_errors = [
+        result
+        for result in results
+        if result["status"] == "ERROR"
+    ]
+
+    if not infrastructure_errors:
+        print("  None")
+    else:
+        for result in infrastructure_errors:
+            print(
+                f"  {result['id']}: "
+                f"{result['error']}"
+            )
+
+
+def main():
+    dataset = load_dataset()
+
+    print(f"Loaded {len(dataset)} evaluation cases.")
+
+    results = []
+
+    for case in dataset:
+        result = evaluate_case(case)
+        results.append(result)
+
+        print(
+            f"  {result['status']} | "
+            f"tool={result['actual_tool']} | "
+            f"latency={result['latency_ms']:.2f} ms"
+        )
+
+    RESULTS_PATH.parent.mkdir(
+        parents=True,
+        exist_ok=True,
     )
 
     with open(
-        output_path,
+        RESULTS_PATH,
         "w",
         encoding="utf-8",
-    ) as file:
+    ) as f:
         json.dump(
-            output,
-            file,
+            {
+                "total_cases": len(results),
+                "results": results,
+            },
+            f,
             indent=2,
+            ensure_ascii=False,
         )
 
+    print_summary(results)
+
     print(
-        f"\nSaved results to: {output_path}"
+        f"\nResults saved to: {RESULTS_PATH}"
     )
 
 

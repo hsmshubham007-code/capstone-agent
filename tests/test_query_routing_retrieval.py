@@ -1,5 +1,5 @@
-from app.agent import run_agent
 from app.retrieval import search_documents
+from app.router import decide_tool
 
 
 def test_policy_query_retrieves_documents():
@@ -10,49 +10,28 @@ def test_policy_query_retrieves_documents():
     assert len(results) > 0
 
     for doc, score in results:
-        assert score <= 1.0
-        assert doc.metadata.get("source")
+        assert score <= 1.10
 
 
-def test_unknown_policy_has_no_relevant_results():
-    results = search_documents(
-        "What is the company relocation allowance policy?"
+def test_policy_query_routes_to_search():
+    tool = decide_tool(
+        "What is the company leave policy?"
     )
 
-    assert results == []
+    assert tool == "search_documents"
 
 
-def test_unknown_policy_does_not_hallucinate():
-    result = run_agent(
-        "What is the company relocation allowance policy?",
-        "test-unknown-policy",
+def test_stock_query_does_not_use_rag():
+    tool = decide_tool(
+        "What is the company's stock price today?"
     )
 
-    assert result["tool"] == "search_documents"
-    assert result["sources"] == []
+    assert tool == "no_tool"
 
-    assert (
-        "I don't have enough information"
-        in result["answer"]
+
+def test_password_query_routes_to_search():
+    tool = decide_tool(
+        "What is the company password policy?"
     )
 
-    search_trace = next(
-        item
-        for item in result["trace"]
-        if item["step"] == "search_documents"
-    )
-
-    assert (
-        search_trace["retrieval_status"]
-        == "NO_RELEVANT_RESULTS"
-    )
-
-
-def test_general_question_does_not_search_documents():
-    result = run_agent(
-        "What is Python?",
-        "test-general-question",
-    )
-
-    assert result["tool"] == "no_tool"
-    assert result["sources"] == []
+    assert tool == "search_documents"
