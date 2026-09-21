@@ -10,6 +10,7 @@ from app.graph import graph
 from app.llm import LLMServiceError
 from app.logging_config import setup_logging
 from app.metrics import metrics
+from app.retrieval import get_embeddings
 
 # =========================================================
 # Logging
@@ -32,6 +33,53 @@ app = FastAPI(
     version="1.1.0",
 )
 
+
+# =========================================================
+# Startup warm-up
+# =========================================================
+
+@app.on_event("startup")
+def warmup_retrieval():
+    """
+    Load the embedding model during application startup.
+
+    This prevents the first /chat request from paying the
+    model initialization/download cost.
+    """
+
+    logger.info(
+        "Starting retrieval warm-up"
+    )
+
+    start_time = time.perf_counter()
+
+    try:
+        get_embeddings()
+
+        latency_ms = (
+            time.perf_counter()
+            - start_time
+        ) * 1000
+
+        logger.info(
+            "Retrieval warm-up completed",
+            extra={
+                "latency_ms": round(
+                    latency_ms,
+                    2,
+                ),
+            },
+        )
+
+    except Exception as exc:
+        logger.exception(
+            "Retrieval warm-up failed",
+            extra={
+                "error": str(exc),
+            },
+        )
+
+        raise
 
 # =========================================================
 # Request / Response models
