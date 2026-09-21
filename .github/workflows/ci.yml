@@ -26,6 +26,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Build test vector store
+        run: |
+          python -m app.ingest
+
       - name: Run Ruff
         run: |
           ruff check .
@@ -33,6 +37,10 @@ jobs:
       - name: Run tests
         run: |
           pytest -q
+
+      - name: Run evaluation gate
+        run: |
+          python evals/check_evaluation_gate.py
 
       - name: Run evaluation gate
         run: |
