@@ -19,3 +19,4 @@ pandas
 requests
 matplotlib==3.11.2
 ruff==0.13.2
+pytest==9.1.1
