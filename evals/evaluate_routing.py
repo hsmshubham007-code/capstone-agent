@@ -5,7 +5,6 @@ from pathlib import Path
 
 from app.agent import run_agent
 
-
 DATASET_PATH = Path("evals/query_routing_dataset.json")
 RESULTS_PATH = Path("evals/routing_evaluation_results.json")
 
@@ -30,7 +29,7 @@ def evaluate_case(case):
             session_id=f"eval-{case['id']}",
         )
         error = None
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - evaluator records per-case failures
         result = {}
         error = str(exc)
 
@@ -339,3 +338,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

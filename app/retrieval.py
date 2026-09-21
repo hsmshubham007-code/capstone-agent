@@ -1,7 +1,6 @@
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 
-
 CHROMA_DIR = "storage/chroma"
 COLLECTION_NAME = "capstone_documents"
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"

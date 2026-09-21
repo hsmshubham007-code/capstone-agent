@@ -1,11 +1,10 @@
-from pathlib import Path
 import shutil
+from pathlib import Path
 
 from langchain_chroma import Chroma
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-
 
 DATA_DIR = Path("data")
 CHROMA_DIR = Path("storage/chroma")
