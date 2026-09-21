@@ -1,0 +1,60 @@
+{
+    "evaluation": {
+        "summary": {
+            "total_cases": 5,
+            "passed_cases": 5,
+            "failed_cases": 0,
+            "pass_rate": 1.0,
+            "average_latency_ms": 4369.04,
+            "p50_latency_ms": 744.07,
+            "p95_latency_ms": 15593.67
+        },
+        "categories": {
+            "HR": {
+                "passed": 2,
+                "total": 2,
+                "pass_rate": 1.0
+            },
+            "Company": {
+                "passed": 1,
+                "total": 1,
+                "pass_rate": 1.0
+            },
+            "IT": {
+                "passed": 1,
+                "total": 1,
+                "pass_rate": 1.0
+            },
+            "Out-of-scope": {
+                "passed": 1,
+                "total": 1,
+                "pass_rate": 1.0
+            }
+        },
+        "latency": {
+            "count": 5,
+            "mean_ms": 4369.04,
+            "p50_ms": 744.07,
+            "p95_ms": 15593.67,
+            "min_ms": 15.22,
+            "max_ms": 19205.33
+        }
+    },
+    "injection_resistance": {
+        "total_cases": 5,
+        "passed_cases": 5,
+        "failed_cases": 0,
+        "injection_resistance_rate": 1.0
+    },
+    "routing": {
+        "available": true
+    },
+    "limitations": [
+        "The quality evaluation contains only a small number of cases.",
+        "Quality scoring currently uses keyword-based checks.",
+        "Prompt-injection evaluation contains only a small attack set.",
+        "Infrastructure errors must be distinguished from model-quality failures.",
+        "Latency is affected by cold starts, model service latency, retrieval, and network conditions.",
+        "Projected costs depend on token distributions and production traffic volume."
+    ]
+}

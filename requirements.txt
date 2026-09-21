@@ -17,3 +17,4 @@ pypdf
 streamlit
 pandas
 requests
+matplotlib==3.11.2

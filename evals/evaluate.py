@@ -1,4 +1,3 @@
-
 import json
 import statistics
 import sys
@@ -28,14 +27,13 @@ RESULTS_PATH = (
 
 
 def percentile(values, percentile_value):
+    """Calculate an interpolated percentile."""
     if not values:
         return 0.0
 
     values = sorted(values)
 
-    index = (
-        len(values) - 1
-    ) * percentile_value
+    index = (len(values) - 1) * percentile_value
 
     lower = int(index)
 
@@ -55,6 +53,11 @@ def estimate_cost(
     prompt_tokens,
     completion_tokens,
 ):
+    """
+    Estimate cost using the Groq GPT-OSS-20B
+    representative pricing configured for this project.
+    """
+
     input_price = 0.075
     output_price = 0.30
 
@@ -100,10 +103,15 @@ def run_evaluation():
 
         start = time.perf_counter()
 
-        result = run_agent(
-            question,
-            session_id=f"eval-{case_id}",
-        )
+        try:
+            result = run_agent(
+                question,
+                session_id=f"eval-{case_id}",
+            )
+            error = None
+        except Exception as exc:  # noqa: BLE001
+            result = {}
+            error = str(exc)
 
         latency_ms = (
             time.perf_counter() - start
@@ -116,14 +124,19 @@ def run_evaluation():
 
         answer_lower = answer.lower()
 
-        passed = all(
-            keyword.lower() in answer_lower
-            for keyword in expected_keywords
+        passed = (
+            error is None
+            and all(
+                keyword.lower() in answer_lower
+                for keyword in expected_keywords
+            )
         )
 
         status = (
             "PASS"
             if passed
+            else "ERROR"
+            if error
             else "FAIL"
         )
 
@@ -145,6 +158,7 @@ def run_evaluation():
                     "tools_used",
                     [],
                 ),
+                "error": error,
             }
         )
 
@@ -153,10 +167,8 @@ def run_evaluation():
             f"Latency: {latency_ms:.2f} ms"
         )
 
-        # Diagnostic information.
-        # This helps us understand why
-        # a test failed.
-        print(f"Answer: {answer}")
+        if answer:
+            print(f"Answer: {answer}")
 
         print(
             "Sources: "
@@ -168,7 +180,10 @@ def run_evaluation():
             f"{result.get('tools_used', [])}"
         )
 
-        if not passed:
+        if error:
+            print(f"Error: {error}")
+
+        if not passed and error is None:
             missing_keywords = [
                 keyword
                 for keyword in expected_keywords
@@ -186,38 +201,67 @@ def run_evaluation():
         for result in results
     )
 
+    failed_count = sum(
+        result["status"] == "FAIL"
+        for result in results
+    )
+
+    error_count = sum(
+        result["status"] == "ERROR"
+        for result in results
+    )
+
     total_count = len(results)
 
+    evaluated_count = (
+        passed_count + failed_count
+    )
+
     pass_rate = (
-        passed_count / total_count
+        passed_count / evaluated_count
+        if evaluated_count
+        else 0
+    )
+
+    completion_rate = (
+        evaluated_count / total_count
         if total_count
         else 0
     )
 
-    latencies = [
+    error_rate = (
+        error_count / total_count
+        if total_count
+        else 0
+    )
+
+    successful_latencies = [
         result["latency_ms"]
         for result in results
+        if result["status"] != "ERROR"
     ]
 
     average_latency = (
-        statistics.mean(latencies)
-        if latencies
+        statistics.mean(successful_latencies)
+        if successful_latencies
         else 0
     )
 
     p50_latency = percentile(
-        latencies,
+        successful_latencies,
         0.50,
     )
 
     p95_latency = percentile(
-        latencies,
+        successful_latencies,
         0.95,
     )
 
     categories = defaultdict(
         lambda: {
             "passed": 0,
+            "failed": 0,
+            "errors": 0,
             "total": 0,
         }
     )
@@ -230,14 +274,68 @@ def run_evaluation():
         if result["status"] == "PASS":
             categories[category]["passed"] += 1
 
+        elif result["status"] == "FAIL":
+            categories[category]["failed"] += 1
+
+        elif result["status"] == "ERROR":
+            categories[category]["errors"] += 1
+
+    category_results = {}
+
+    for category, values in categories.items():
+        evaluated = (
+            values["passed"]
+            + values["failed"]
+        )
+
+        category_results[category] = {
+            "passed": values["passed"],
+            "failed": values["failed"],
+            "errors": values["errors"],
+            "total": values["total"],
+            "evaluated": evaluated,
+            "pass_rate": round(
+                values["passed"] / evaluated,
+                4,
+            )
+            if evaluated
+            else 0.0,
+        }
+
     print()
     print("=" * 60)
     print("SUMMARY")
     print("=" * 60)
 
     print(
-        f"Pass rate: "
+        f"Total cases: {total_count}"
+    )
+
+    print(
+        f"Passed: {passed_count}"
+    )
+
+    print(
+        f"Failed: {failed_count}"
+    )
+
+    print(
+        f"Errors: {error_count}"
+    )
+
+    print(
+        f"Completion rate: "
+        f"{completion_rate * 100:.1f}%"
+    )
+
+    print(
+        f"Pass rate among completed cases: "
         f"{pass_rate * 100:.1f}%"
+    )
+
+    print(
+        f"Error rate: "
+        f"{error_rate * 100:.1f}%"
     )
 
     print(
@@ -258,61 +356,32 @@ def run_evaluation():
     print()
     print("By category:")
 
-    for category, values in categories.items():
-        category_rate = (
-            values["passed"]
-            / values["total"]
-            * 100
-        )
-
+    for category, values in category_results.items():
         print(
             f"  {category}: "
             f"{values['passed']}/"
-            f"{values['total']} "
-            f"({category_rate:.1f}%)"
+            f"{values['evaluated']} passed "
+            f"({values['pass_rate'] * 100:.1f}%), "
+            f"{values['errors']} error(s)"
         )
 
-    print()
-    print("By category:")
-
-    for category, values in categories.items():
-        category_rate = (
-            values["passed"]
-            / values["total"]
-            * 100
-        )
-
-        print(
-            f"  {category}: "
-            f"{values['passed']}/"
-            f"{values['total']} "
-            f"({category_rate:.1f}%)"
-        )
-
-    # Build category results for JSON output.
-    category_results = {}
-
-    for category, values in categories.items():
-        category_results[category] = {
-            "passed": values["passed"],
-            "total": values["total"],
-            "pass_rate": round(
-                values["passed"]
-                / values["total"],
-                4,
-            )
-            if values["total"]
-            else 0.0,
-        }
-
-    # Build the complete evaluation report.
     evaluation_report = {
         "summary": {
             "total_cases": total_count,
             "passed_cases": passed_count,
-            "failed_cases": total_count - passed_count,
-            "pass_rate": round(
+            "failed_cases": failed_count,
+            "error_cases": error_count,
+            "evaluated_cases": evaluated_count,
+            "completion_rate": round(
+                completion_rate,
+                4,
+            ),
+            "pass_rate_completed": round(
                 pass_rate,
+                4,
+            ),
+            "error_rate": round(
+                error_rate,
                 4,
             ),
             "average_latency_ms": round(
@@ -338,11 +407,11 @@ def run_evaluation():
             "The first request may include model or embedding cold-start overhead.",
             "Cost is estimated from representative token usage.",
             "Production traffic may have different token distributions.",
+            "Infrastructure errors are reported separately from model correctness.",
             "A larger stratified production dataset is required for stronger confidence.",
         ],
     }
 
-    # Save evaluation results.
     with open(
         RESULTS_PATH,
         "w",
@@ -352,6 +421,7 @@ def run_evaluation():
             evaluation_report,
             file,
             indent=4,
+            ensure_ascii=False,
         )
 
     print()

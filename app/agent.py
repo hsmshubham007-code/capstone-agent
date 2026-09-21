@@ -72,6 +72,7 @@ def run_agent(
             "tools_used": [],
             "approval_id": "",
             "approval_status": "",
+            "llm_metadata": None,
             "conversation_history": get_history(
                 session_id
             ),
@@ -95,17 +96,18 @@ def run_agent(
     # -------------------------------------------------
 
     state = {
-        "request_id": request_id,
-        "session_id": session_id,
-        "question": question,
-        "conversation_history": history,
-        "tool": "",
-        "answer": "",
-        "sources": [],
-        "tools_used": [],
-        "approval_id": "",
-        "approval_status": "",
-        "trace": [],
+      "request_id": request_id,
+      "session_id": session_id,
+      "question": question,
+      "conversation_history": history,
+      "tool": "",
+      "answer": "",
+      "sources": [],
+      "tools_used": [],
+      "approval_id": "",
+      "approval_status": "",
+      "llm_metadata": None,
+      "trace": [],
     }
 
     # -------------------------------------------------

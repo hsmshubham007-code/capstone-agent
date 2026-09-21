@@ -40,10 +40,6 @@ class LLMServiceError(Exception):
 def get_api_key():
     """
     Read the Groq API key at runtime.
-
-    Reading the environment here instead of storing it
-    in a module-level variable makes testing with
-    pytest monkeypatch.setenv() work correctly.
     """
     return os.getenv("GROQ_API_KEY")
 
@@ -124,24 +120,26 @@ def calculate_cost(
 
 
 # =========================================================
-# LLM generation
+# LLM generation with metadata
 # =========================================================
 
-def generate_answer(
+def generate_answer_with_metadata(
     question,
     context,
 ):
     """
     Generate an answer using the Groq LLM.
 
-    Monitoring records:
-    - request count
+    Returns both the answer and per-request
+    monitoring metadata.
+
+    Metadata includes:
+    - model
     - latency
     - prompt tokens
     - completion tokens
     - total tokens
     - estimated cost
-    - errors
     """
 
     prompt = f"""
@@ -167,16 +165,8 @@ Question:
 Answer:
 """
 
-    # -----------------------------------------------------
-    # Read configuration at runtime
-    # -----------------------------------------------------
-
     api_key = get_api_key()
     model = get_model()
-
-    # -----------------------------------------------------
-    # Validate configuration
-    # -----------------------------------------------------
 
     if not api_key:
         metrics.increment(
@@ -204,10 +194,6 @@ Answer:
             "The Groq model is not configured."
         )
 
-    # -----------------------------------------------------
-    # Start monitoring
-    # -----------------------------------------------------
-
     metrics.increment(
         "llm_requests_total"
     )
@@ -215,15 +201,7 @@ Answer:
     start_time = time.perf_counter()
 
     try:
-        # -------------------------------------------------
-        # Create Groq client
-        # -------------------------------------------------
-
         client = get_client()
-
-        # -------------------------------------------------
-        # Groq API call
-        # -------------------------------------------------
 
         response = client.chat.completions.create(
             model=model,
@@ -236,22 +214,10 @@ Answer:
             temperature=0,
         )
 
-        # -------------------------------------------------
-        # Calculate latency
-        # -------------------------------------------------
-
         latency_ms = (
             time.perf_counter()
             - start_time
         ) * 1000
-
-        metrics.observe_latency(
-            latency_ms
-        )
-
-        # -------------------------------------------------
-        # Token usage
-        # -------------------------------------------------
 
         usage = getattr(
             response,
@@ -282,15 +248,15 @@ Answer:
                 0,
             ) or 0
 
+        metrics.observe_latency(
+            latency_ms
+        )
+
         metrics.record_llm_usage(
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
             total_tokens=total_tokens,
         )
-
-        # -------------------------------------------------
-        # Calculate estimated cost
-        # -------------------------------------------------
 
         cost_usd = calculate_cost(
             model=model,
@@ -302,17 +268,9 @@ Answer:
             cost_usd
         )
 
-        # -------------------------------------------------
-        # Success counter
-        # -------------------------------------------------
-
         metrics.increment(
             "llm_requests_success_total"
         )
-
-        # -------------------------------------------------
-        # Log successful request
-        # -------------------------------------------------
 
         logger.info(
             "LLM request completed",
@@ -334,10 +292,6 @@ Answer:
             },
         )
 
-        # -------------------------------------------------
-        # Extract answer
-        # -------------------------------------------------
-
         answer = (
             response
             .choices[0]
@@ -354,18 +308,26 @@ Answer:
                 "The Groq LLM returned an empty response."
             )
 
-        return answer.strip()
-
-    # -----------------------------------------------------
-    # Preserve our own service errors
-    # -----------------------------------------------------
+        return {
+            "answer": answer.strip(),
+            "metadata": {
+                "model": model,
+                "latency_ms": round(
+                    latency_ms,
+                    2,
+                ),
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "total_tokens": total_tokens,
+                "cost_usd": round(
+                    cost_usd,
+                    8,
+                ),
+            },
+        }
 
     except LLMServiceError:
         raise
-
-    # -----------------------------------------------------
-    # Convert unexpected errors into service errors
-    # -----------------------------------------------------
 
     except Exception as exc:
         latency_ms = (
@@ -397,3 +359,24 @@ Answer:
             "The Groq LLM service is currently unavailable."
         ) from exc
 
+
+# =========================================================
+# Backward-compatible generation function
+# =========================================================
+
+def generate_answer(
+    question,
+    context,
+):
+    """
+    Backward-compatible LLM generation function.
+
+    Existing callers receive only the answer string.
+    """
+
+    result = generate_answer_with_metadata(
+        question,
+        context,
+    )
+
+    return result["answer"]

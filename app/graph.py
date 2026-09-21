@@ -2,10 +2,16 @@ import re
 import time
 from typing import Literal
 
-from langgraph.graph import END, START, StateGraph
+from langgraph.graph import (
+    END,
+    START,
+    StateGraph,
+)
 
 from app import tools
-from app.approval import create_approval_request
+from app.approval import (
+    create_approval_request,
+)
 from app.audit import record_tool_call
 from app.checkpoint import checkpointer
 from app.router import decide_tool
@@ -18,7 +24,9 @@ NO_INFORMATION_ANSWER = (
 )
 
 
-def router_node(state: AgentState):
+def router_node(
+    state: AgentState,
+):
     start = time.perf_counter()
 
     tool = decide_tool(
@@ -26,18 +34,30 @@ def router_node(state: AgentState):
         state["conversation_history"],
     )
 
-    duration = time.perf_counter() - start
-    request_id = state.get("request_id")
+    duration = (
+        time.perf_counter()
+        - start
+    )
+
+    request_id = state.get(
+        "request_id"
+    )
 
     if request_id:
         record_tool_call(
             request_id=request_id,
             tool_name="router",
-            arguments={"question": state["question"]},
+            arguments={
+                "question": state[
+                    "question"
+                ],
+            },
             status="SUCCESS",
             outcome={
                 "selected_tool": tool,
-                "approval_required": requires_approval(tool),
+                "approval_required": (
+                    requires_approval(tool)
+                ),
             },
         )
 
@@ -54,12 +74,23 @@ def router_node(state: AgentState):
     }
 
 
-def approval_node(state: AgentState):
-    request_id = state["request_id"]
-    tool_name = state["tool"]
-    question = state["question"]
+def approval_node(
+    state: AgentState,
+):
+    request_id = state[
+        "request_id"
+    ]
+
+    tool_name = state[
+        "tool"
+    ]
+
+    question = state[
+        "question"
+    ]
 
     if tool_name == "update_employee_record":
+
         employee_match = re.search(
             r"employee\s+(EMP\d+)",
             question,
@@ -73,18 +104,27 @@ def approval_node(state: AgentState):
         )
 
         if not employee_match:
-            raise ValueError("Could not identify employee ID.")
+            raise ValueError(
+                "Could not identify employee ID."
+            )
 
         if not salary_match:
-            raise ValueError("Could not identify new salary.")
+            raise ValueError(
+                "Could not identify new salary."
+            )
 
         arguments = {
-            "employee_id": employee_match.group(1),
+            "employee_id": (
+                employee_match.group(1)
+            ),
             "field": "salary",
-            "new_value": int(salary_match.group(1)),
+            "new_value": int(
+                salary_match.group(1)
+            ),
         }
 
     else:
+
         arguments = {
             "question": question,
         }
@@ -101,8 +141,12 @@ def approval_node(state: AgentState):
         arguments=arguments,
         status="BLOCKED",
         outcome={
-            "reason": "human_approval_required",
-            "approval_id": approval["approval_id"],
+            "reason": (
+                "human_approval_required"
+            ),
+            "approval_id": (
+                approval["approval_id"]
+            ),
         },
     )
 
@@ -111,16 +155,21 @@ def approval_node(state: AgentState):
             "This action requires human approval "
             "before it can be executed."
         ),
-        "approval_id": approval["approval_id"],
+        "approval_id": (
+            approval["approval_id"]
+        ),
         "approval_status": "PENDING",
         "sources": [],
         "tools_used": [],
+        "llm_metadata": None,
         "trace": state["trace"]
         + [
             {
                 "step": "approval_required",
                 "tool": tool_name,
-                "approval_id": approval["approval_id"],
+                "approval_id": (
+                    approval["approval_id"]
+                ),
                 "status": "PENDING",
                 "duration": 0,
             }
@@ -128,43 +177,72 @@ def approval_node(state: AgentState):
     }
 
 
-def search_node(state: AgentState):
+def search_node(
+    state: AgentState,
+):
     start = time.perf_counter()
 
     result = tools.search_documents_tool(
         question=state["question"],
-        history=state["conversation_history"],
-        request_id=state.get("request_id"),
+        history=state[
+            "conversation_history"
+        ],
+        request_id=state.get(
+            "request_id"
+        ),
     )
 
-    duration = time.perf_counter() - start
+    duration = (
+        time.perf_counter()
+        - start
+    )
 
-    results = result.get("results", [])
+    results = result.get(
+        "results",
+        [],
+    )
 
     # -------------------------------------------------
     # Retrieval found relevant documents
     # -------------------------------------------------
 
     if results:
-        answer = result["answer"]
-        sources = result["sources"]
 
-        retrieval_status = "RELEVANT"
+        answer = result["answer"]
+
+        sources = result[
+            "sources"
+        ]
+
+        retrieval_status = (
+            "RELEVANT"
+        )
 
     # -------------------------------------------------
     # Retrieval found nothing relevant
     # -------------------------------------------------
 
     else:
-        answer = NO_INFORMATION_ANSWER
+
+        answer = (
+            NO_INFORMATION_ANSWER
+        )
+
         sources = []
 
-        retrieval_status = "NO_RELEVANT_RESULTS"
+        retrieval_status = (
+            "NO_RELEVANT_RESULTS"
+        )
 
     return {
         "answer": answer,
         "sources": sources,
-        "tools_used": [result["name"]],
+        "tools_used": [
+            result["name"]
+        ],
+        "llm_metadata": result.get(
+            "llm_metadata"
+        ),
         "trace": state["trace"]
         + [
             {
@@ -172,14 +250,18 @@ def search_node(state: AgentState):
                 "tool": result["name"],
                 "sources": sources,
                 "results": results,
-                "retrieval_status": retrieval_status,
+                "retrieval_status": (
+                    retrieval_status
+                ),
                 "duration": duration,
             }
         ],
     }
 
 
-def no_tool_node(state: AgentState):
+def no_tool_node(
+    state: AgentState,
+):
     return {
         "answer": (
             "I don't have enough information in the "
@@ -187,6 +269,7 @@ def no_tool_node(state: AgentState):
         ),
         "sources": [],
         "tools_used": [],
+        "llm_metadata": None,
         "trace": state["trace"]
         + [
             {
@@ -200,7 +283,12 @@ def no_tool_node(state: AgentState):
 
 def route_after_router(
     state: AgentState,
-) -> Literal["search", "approval", "no_tool"]:
+) -> Literal[
+    "search",
+    "approval",
+    "no_tool",
+]:
+
     tool = state["tool"]
 
     if tool == "search_documents":
@@ -212,12 +300,33 @@ def route_after_router(
     return "no_tool"
 
 
-builder = StateGraph(AgentState)
+# =========================================================
+# Build LangGraph
+# =========================================================
 
-builder.add_node("router", router_node)
-builder.add_node("search", search_node)
-builder.add_node("approval", approval_node)
-builder.add_node("no_tool", no_tool_node)
+builder = StateGraph(
+    AgentState
+)
+
+builder.add_node(
+    "router",
+    router_node,
+)
+
+builder.add_node(
+    "search",
+    search_node,
+)
+
+builder.add_node(
+    "approval",
+    approval_node,
+)
+
+builder.add_node(
+    "no_tool",
+    no_tool_node,
+)
 
 builder.add_edge(
     START,
@@ -248,6 +357,7 @@ builder.add_edge(
     "no_tool",
     END,
 )
+
 
 graph = builder.compile(
     checkpointer=checkpointer,

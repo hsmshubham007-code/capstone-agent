@@ -1,0 +1,26 @@
+{
+    "assumptions": {
+        "base_monthly_queries": 10000,
+        "volume_multiplier": 10,
+        "projected_monthly_queries": 100000,
+        "prompt_tokens_per_query": 1000,
+        "completion_tokens_per_query": 300,
+        "large_model_fraction": 0.1
+    },
+    "per_query": {
+        "20b_usd": 0.000165,
+        "120b_usd": 0.00033,
+        "routed_usd": 0.00018150000000000002,
+        "routing_savings_percentage": 0.44999999999999996
+    },
+    "monthly_base": {
+        "always_20b_usd": 1.65,
+        "always_120b_usd": 3.3,
+        "routed_usd": 1.8150000000000002
+    },
+    "monthly_10x": {
+        "always_20b_usd": 16.5,
+        "always_120b_usd": 33.0,
+        "routed_usd": 18.150000000000002
+    }
+}

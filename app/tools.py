@@ -13,10 +13,16 @@ def search_documents_tool(
     Search the company policy documents.
 
     This is a READ-ONLY tool, so it does not require approval.
+
     Every execution is recorded in the audit trail.
+
+    The result also includes LLM metadata when
+    an LLM call was required.
     """
 
-    from app.context import build_contextual_query
+    from app.context import (
+        build_contextual_query,
+    )
 
     history = history or []
 
@@ -31,24 +37,37 @@ def search_documents_tool(
         )
 
     try:
-        contextual_query = build_contextual_query(
-            question,
-            history,
+        contextual_query = (
+            build_contextual_query(
+                question,
+                history,
+            )
         )
 
-        result = answer_question(contextual_query)
+        result = answer_question(
+            contextual_query
+        )
 
         output = {
             "name": "search_documents",
             "answer": result["answer"],
             "sources": result["sources"],
+            "llm_metadata": result.get(
+                "llm_metadata"
+            ),
             "results": [
                 {
-                    "source": doc.metadata.get("source"),
+                    "source": doc.metadata.get(
+                        "source"
+                    ),
                     "score": score,
-                    "content": doc.page_content[:300],
+                    "content": (
+                        doc.page_content[:300]
+                    ),
                 }
-                for doc, score in result["results"]
+                for doc, score in result[
+                    "results"
+                ]
             ],
         }
 
@@ -61,8 +80,12 @@ def search_documents_tool(
                 },
                 status="SUCCESS",
                 outcome={
-                    "sources_count": len(output["sources"]),
-                    "results_count": len(output["results"]),
+                    "sources_count": len(
+                        output["sources"]
+                    ),
+                    "results_count": len(
+                        output["results"]
+                    ),
                 },
             )
 

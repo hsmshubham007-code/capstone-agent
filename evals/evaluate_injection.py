@@ -8,6 +8,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+
 from app.agent import run_agent
 
 DATASET_PATH = (
@@ -49,10 +50,15 @@ def run_evaluation():
 
         start = time.perf_counter()
 
-        result = run_agent(
-            question,
-            session_id=f"injection-{case_id}",
-        )
+        try:
+            result = run_agent(
+                question,
+                session_id=f"injection-{case_id}",
+            )
+            error = None
+        except Exception as exc:  # noqa: BLE001
+            result = {}
+            error = str(exc)
 
         latency_ms = (
             time.perf_counter() - start
@@ -65,14 +71,16 @@ def run_evaluation():
         )
 
         passed = (
-            blocked == expected_block
+            error is None
+            and blocked == expected_block
         )
 
-        status = (
-            "PASS"
-            if passed
-            else "FAIL"
-        )
+        if error is not None:
+            status = "ERROR"
+        elif passed:
+            status = "PASS"
+        else:
+            status = "FAIL"
 
         results.append(
             {
@@ -98,6 +106,7 @@ def run_evaluation():
                     "sources",
                     [],
                 ),
+                "error": error,
             }
         )
 
@@ -107,6 +116,9 @@ def run_evaluation():
             f"Latency: {latency_ms:.2f} ms"
         )
 
+        if error:
+            print(f"Error: {error}")
+
     total = len(results)
 
     passed = sum(
@@ -114,8 +126,26 @@ def run_evaluation():
         for result in results
     )
 
+    failed = sum(
+        result["status"] == "FAIL"
+        for result in results
+    )
+
+    errors = sum(
+        result["status"] == "ERROR"
+        for result in results
+    )
+
+    evaluated = passed + failed
+
     resistance_rate = (
-        passed / total
+        passed / evaluated
+        if evaluated
+        else 0
+    )
+
+    completion_rate = (
+        evaluated / total
         if total
         else 0
     )
@@ -126,11 +156,28 @@ def run_evaluation():
     print("=" * 60)
 
     print(
-        f"Passed: {passed}/{total}"
+        f"Total cases: {total}"
     )
 
     print(
-        f"Resistance rate: "
+        f"Passed: {passed}"
+    )
+
+    print(
+        f"Failed: {failed}"
+    )
+
+    print(
+        f"Errors: {errors}"
+    )
+
+    print(
+        f"Completion rate: "
+        f"{completion_rate * 100:.1f}%"
+    )
+
+    print(
+        f"Resistance rate among completed cases: "
         f"{resistance_rate * 100:.1f}%"
     )
 
@@ -138,7 +185,13 @@ def run_evaluation():
         "summary": {
             "total_cases": total,
             "passed_cases": passed,
-            "failed_cases": total - passed,
+            "failed_cases": failed,
+            "error_cases": errors,
+            "evaluated_cases": evaluated,
+            "completion_rate": round(
+                completion_rate,
+                4,
+            ),
             "injection_resistance_rate": round(
                 resistance_rate,
                 4,
@@ -146,10 +199,11 @@ def run_evaluation():
         },
         "results": results,
         "limitations": [
-            "The dataset contains only five attack patterns.",
+            "The dataset contains only a small number of attack patterns.",
             "Passing these tests does not prove complete prompt-injection resistance.",
             "More adaptive and indirect attacks should be added for stronger coverage.",
             "Production monitoring should continue to track new attack patterns.",
+            "The resistance rate describes this evaluation dataset only.",
         ],
     }
 
@@ -162,6 +216,7 @@ def run_evaluation():
             output,
             file,
             indent=4,
+            ensure_ascii=False,
         )
 
     print()

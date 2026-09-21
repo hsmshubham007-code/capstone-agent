@@ -13,6 +13,9 @@ def answer_question(question, k=3):
 
     If no relevant documents are retrieved, do not call the LLM.
     Return an honest limitation instead.
+
+    The existing generate_answer() interface is preserved so
+    existing tests can monkeypatch app.rag.generate_answer.
     """
 
     results = search_documents(
@@ -29,10 +32,16 @@ def answer_question(question, k=3):
             "answer": NO_INFORMATION_ANSWER,
             "sources": [],
             "results": [],
+            "llm_metadata": {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "cost_usd": 0.0,
+            },
         }
 
     # -------------------------------------------------
-    # Build context from retrieved documents
+    # Build context
     # -------------------------------------------------
 
     context_parts = []
@@ -49,7 +58,7 @@ def answer_question(question, k=3):
     context = "\n\n".join(context_parts)
 
     # -------------------------------------------------
-    # Generate answer using retrieved context
+    # Generate answer
     # -------------------------------------------------
 
     answer = generate_answer(
@@ -61,6 +70,12 @@ def answer_question(question, k=3):
         "answer": answer,
         "sources": sources,
         "results": results,
+        "llm_metadata": {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+            "cost_usd": 0.0,
+        },
     }
 
 
