@@ -40,6 +40,10 @@ PROMPT_INJECTION_PATTERNS = [
     r"\bdeveloper\s+message\b",
     r"\bhidden\s+instructions?\b",
     r"\bsecret\s+instructions?\b",
+
+    r"\bdisregard\b.{0,80}\b(rules?|instructions?)\b",
+    r"\breveal\b.{0,100}\b(confidential|secret|private|internal)\b",
+    r"\breveal\b.{0,100}\b(system|hidden)\s+(information|data|details)\b",
 ]
 
 

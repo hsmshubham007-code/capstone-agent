@@ -1,12 +1,14 @@
 from pathlib import Path
+import shutil
 
 from langchain_chroma import Chroma
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
+
 DATA_DIR = Path("data")
-CHROMA_DIR = "storage/chroma"
+CHROMA_DIR = Path("storage/chroma")
 COLLECTION_NAME = "capstone_documents"
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
@@ -36,12 +38,17 @@ def split_documents(documents):
 
 
 def build_vectorstore(chunks):
+    # Start with a clean index so repeated ingestion
+    # does not create duplicate documents.
+    if CHROMA_DIR.exists():
+        shutil.rmtree(CHROMA_DIR)
+
     embeddings = HuggingFaceEmbeddings(
         model_name=EMBEDDING_MODEL
     )
 
     db = Chroma(
-        persist_directory=CHROMA_DIR,
+        persist_directory=str(CHROMA_DIR),
         collection_name=COLLECTION_NAME,
         embedding_function=embeddings,
     )

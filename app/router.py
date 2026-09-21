@@ -58,6 +58,24 @@ def decide_tool(
         "procedure",
         "procedures",
 
+        # Company-specific subjects
+        "company mission",
+        "company's mission",
+        "mission",
+        "ethical business",
+        "ethical business practices",
+        "ethical practices",
+        "business ethics",
+        "conflict of interest",
+        "conflicts of interest",
+        "intellectual property",
+        "public statements",
+        "official public statements",
+        "public statement",
+        "official statement",
+        "spokesperson",
+        "authorized spokesperson",
+
         # HR
         "leave",
         "holiday",
@@ -166,10 +184,6 @@ def decide_tool(
     # -------------------------------------------------
     # 3. Natural-language policy questions
     # -------------------------------------------------
-
-    # Some policy questions do not contain the word
-    # "policy". These patterns catch common questions
-    # about employee/company rules.
 
     question_patterns = [
         "what should employees do",
