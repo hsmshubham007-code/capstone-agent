@@ -1,48 +1,61 @@
 [
-  {
-    "id": "hr_001",
-    "category": "HR",
-    "question": "What does the company say about professional conduct?",
-    "expected_keywords": [
-      "professional",
-      "respect",
-      "confidentiality"
-    ]
-  },
-  {
-    "id": "hr_002",
-    "category": "HR",
-    "question": "What should employees do about workplace harassment?",
-    "expected_keywords": [
-      "harassment",
-      "report"
-    ]
-  },
-  {
-    "id": "company_001",
-    "category": "Company",
-    "question": "What should employees do if they identify a policy violation?",
-    "expected_keywords": [
-      "report",
-      "violation"
-    ]
-  },
-  {
-    "id": "it_001",
-    "category": "IT",
-    "question": "How should company information be protected?",
-   "expected_keywords": [
-    "confidential",
-    "secure",
-    "authorized"
-]
-  },
-  {
-    "id": "out_of_scope_001",
-    "category": "Out-of-scope",
-    "question": "What is the current stock price of the company?",
-    "expected_keywords": [
-      "don't have enough information"
-    ]
-  }
+    {
+        "id": "hr_001",
+        "category": "HR",
+        "question": "What does the company say about professional conduct?",
+        "expected_keywords": [
+            "professional",
+            "respect",
+            "confidentiality"
+        ],
+        "expected_sources": [
+            "hr_policy.pdf"
+        ]
+    },
+    {
+        "id": "hr_002",
+        "category": "HR",
+        "question": "What should employees do about workplace harassment?",
+        "expected_keywords": [
+            "harassment",
+            "report"
+        ],
+        "expected_sources": [
+            "hr_policy.pdf"
+        ]
+    },
+    {
+        "id": "company_001",
+        "category": "Company",
+        "question": "What should employees do if they identify a policy violation?",
+        "expected_keywords": [
+            "report",
+            "violation"
+        ],
+        "expected_sources": [
+            "company_policy.pdf"
+        ]
+    },
+    {
+        "id": "it_001",
+        "category": "IT",
+        "question": "How should company information be protected?",
+        "expected_keywords": [
+            "confidential",
+            "secure",
+            "authorized"
+        ],
+        "expected_sources": [
+            "it_policy.pdf"
+        ]
+    },
+    {
+        "id": "out_of_scope_001",
+        "category": "Out-of-scope",
+        "question": "What is the current stock price of the company?",
+        "expected_keywords": [
+            "don't have enough information"
+        ],
+        "expected_sources": []
+    }
 ]

@@ -1,109 +1,261 @@
 {
-    "summary": {
-        "total_cases": 5,
-        "passed_cases": 5,
-        "failed_cases": 0,
-        "pass_rate": 1.0,
-        "average_latency_ms": 4369.04,
-        "p50_latency_ms": 744.07,
-        "p95_latency_ms": 15593.67
+  "summary": {
+    "total_cases": 5,
+    "passed": 5,
+    "failed": 0,
+    "errors": 0,
+    "completion_rate": 1.0,
+    "pass_rate": 1.0,
+    "error_rate": 0.0,
+    "average_latency_ms": 4665.92,
+    "p50_latency_ms": 892.52,
+    "p95_latency_ms": 16808.17,
+    "cold_start_latency_ms": 20746.57,
+    "warm_average_latency_ms": 645.75,
+    "warm_p50_latency_ms": 755.21,
+    "warm_p95_latency_ms": 1030.23
+  },
+  "retrieval": {
+    "source_hit_rate": 1.0,
+    "in_scope_retrieval_success_rate": 1.0,
+    "in_scope_cases_with_evidence": 4,
+    "in_scope_case_count": 4,
+    "out_of_scope_no_evidence_rate": 1.0,
+    "out_of_scope_no_evidence_cases": 1,
+    "out_of_scope_case_count": 1,
+    "average_documents_retrieved": 3,
+    "average_retrieval_distance": 0.8194
+  },
+  "cost": {
+    "average_prompt_tokens": 470.75,
+    "average_completion_tokens": 334.75,
+    "average_reasoning_tokens": 197.75,
+    "average_total_tokens": 805.5,
+    "average_cost_per_query_usd": 0.00013573,
+    "total_evaluation_cost_usd": 0.00054291,
+    "projected_cost_1k_usd": 0.1357,
+    "projected_cost_10k_usd": 1.3573,
+    "projected_cost_100k_usd": 13.5727
+  },
+  "category_stats": {
+    "HR": {
+      "total": 2,
+      "passed": 2,
+      "errors": 0
     },
-    "categories": {
-        "HR": {
-            "passed": 2,
-            "total": 2,
-            "pass_rate": 1.0
-        },
-        "Company": {
-            "passed": 1,
-            "total": 1,
-            "pass_rate": 1.0
-        },
-        "IT": {
-            "passed": 1,
-            "total": 1,
-            "pass_rate": 1.0
-        },
-        "Out-of-scope": {
-            "passed": 1,
-            "total": 1,
-            "pass_rate": 1.0
-        }
+    "Company": {
+      "total": 1,
+      "passed": 1,
+      "errors": 0
     },
-    "results": [
-        {
-            "id": "hr_001",
-            "category": "HR",
-            "question": "What does the company say about professional conduct?",
-            "status": "PASS",
-            "latency_ms": 19205.33,
-            "sources": [
-                "hr_policy.pdf",
-                "company_policy.pdf"
-            ],
-            "tools_used": [
-                "search_documents"
-            ]
-        },
-        {
-            "id": "hr_002",
-            "category": "HR",
-            "question": "What should employees do about workplace harassment?",
-            "status": "PASS",
-            "latency_ms": 733.55,
-            "sources": [
-                "hr_policy.pdf",
-                "company_policy.pdf"
-            ],
-            "tools_used": [
-                "search_documents"
-            ]
-        },
-        {
-            "id": "company_001",
-            "category": "Company",
-            "question": "What should employees do if they identify a policy violation?",
-            "status": "PASS",
-            "latency_ms": 744.07,
-            "sources": [
-                "company_policy.pdf"
-            ],
-            "tools_used": [
-                "search_documents"
-            ]
-        },
-        {
-            "id": "it_001",
-            "category": "IT",
-            "question": "How should company information be protected?",
-            "status": "PASS",
-            "latency_ms": 1147.04,
-            "sources": [
-                "company_policy.pdf",
-                "it_policy.pdf"
-            ],
-            "tools_used": [
-                "search_documents"
-            ]
-        },
-        {
-            "id": "out_of_scope_001",
-            "category": "Out-of-scope",
-            "question": "What is the current stock price of the company?",
-            "status": "PASS",
-            "latency_ms": 15.22,
-            "sources": [],
-            "tools_used": []
-        }
-    ],
-    "limitations": [
-        "Evaluation dataset is small.",
-        "Correctness uses keyword-based scoring.",
-        "Keyword matching does not fully measure semantic correctness.",
-        "Latency can vary because of model and network conditions.",
-        "The first request may include model or embedding cold-start overhead.",
-        "Cost is estimated from representative token usage.",
-        "Production traffic may have different token distributions.",
-        "A larger stratified production dataset is required for stronger confidence."
-    ]
+    "IT": {
+      "total": 1,
+      "passed": 1,
+      "errors": 0
+    },
+    "Out-of-scope": {
+      "total": 1,
+      "passed": 1,
+      "errors": 0
+    }
+  },
+  "results": [
+    {
+      "id": "hr_001",
+      "category": "HR",
+      "question": "What does the company say about professional conduct?",
+      "passed": true,
+      "keyword_pass": true,
+      "source_pass": true,
+      "answer": "The company states that professional conduct requires employees to:\n\n- Treat colleagues with respect.  \n- Communicate in a professional manner.  \n- Follow all company procedures.  \n- Protect company property.  \n- Maintain confidentiality of customer, employee, source‑code, business‑plan, financial, product, credential, and internal‑documentation information.  \n- Avoid conflicts of interest.  \n- Comply with all applicable laws and regulations.  \n\nHarassment, discrimination, bullying, threats, violence, or any other inappropriate workplace behavior is not tolerated.  \n\nAll employees are also responsible for understanding these policies, reporting suspected violations, maintaining professional behavior, and completing required training.",
+      "sources": [
+        "hr_policy.pdf",
+        "company_policy.pdf"
+      ],
+      "expected_sources": [
+        "hr_policy.pdf"
+      ],
+      "tools_used": [
+        "search_documents"
+      ],
+      "latency_ms": 20746.57,
+      "retrieval_metadata": {
+        "documents_retrieved": 3,
+        "context_chars": 1408,
+        "sources": [
+          "hr_policy.pdf",
+          "company_policy.pdf"
+        ],
+        "scores": [
+          1.0407,
+          1.076,
+          1.0789
+        ],
+        "latency_ms": 18750.75
+      },
+      "llm_metadata": {
+        "model": "openai/gpt-oss-20b",
+        "latency_ms": 1967.55,
+        "prompt_tokens": 433,
+        "completion_tokens": 397,
+        "reasoning_tokens": 257,
+        "total_tokens": 830,
+        "cost_usd": 0.00015157
+      },
+      "cost_usd": 0.00015157
+    },
+    {
+      "id": "hr_002",
+      "category": "HR",
+      "question": "What should employees do about workplace harassment?",
+      "passed": true,
+      "keyword_pass": true,
+      "source_pass": true,
+      "answer": "Employees should report any harassment or inappropriate workplace behavior to **HR or an appropriate designated authority**.  \nThe report will be handled confidentially to the extent reasonably possible and investigated according to company procedures.  Employees who raise legitimate concerns or report suspected misconduct in good faith are protected from retaliation.",
+      "sources": [
+        "hr_policy.pdf",
+        "company_policy.pdf"
+      ],
+      "expected_sources": [
+        "hr_policy.pdf"
+      ],
+      "tools_used": [
+        "search_documents"
+      ],
+      "latency_ms": 617.91,
+      "retrieval_metadata": {
+        "documents_retrieved": 3,
+        "context_chars": 1886,
+        "sources": [
+          "hr_policy.pdf",
+          "company_policy.pdf"
+        ],
+        "scores": [
+          0.6519,
+          0.884,
+          0.9411
+        ],
+        "latency_ms": 12.7
+      },
+      "llm_metadata": {
+        "model": "openai/gpt-oss-20b",
+        "latency_ms": 585.99,
+        "prompt_tokens": 526,
+        "completion_tokens": 199,
+        "reasoning_tokens": 133,
+        "total_tokens": 725,
+        "cost_usd": 9.915e-05
+      },
+      "cost_usd": 9.915e-05
+    },
+    {
+      "id": "company_001",
+      "category": "Company",
+      "question": "What should employees do if they identify a policy violation?",
+      "passed": true,
+      "keyword_pass": true,
+      "source_pass": true,
+      "answer": "Employees who become aware of a policy violation should report it promptly and honestly in good faith.  The appropriate channels for reporting include:\n\n- Reporting Manager  \n- HR Department  \n- IT/Security Department  \n- Senior Management  \n\nEmployees should not assume that an exception exists simply because a policy requirement is inconvenient.",
+      "sources": [
+        "company_policy.pdf"
+      ],
+      "expected_sources": [
+        "company_policy.pdf"
+      ],
+      "tools_used": [
+        "search_documents"
+      ],
+      "latency_ms": 892.52,
+      "retrieval_metadata": {
+        "documents_retrieved": 3,
+        "context_chars": 1488,
+        "sources": [
+          "company_policy.pdf"
+        ],
+        "scores": [
+          0.7044,
+          0.7471,
+          0.8441
+        ],
+        "latency_ms": 15.23
+      },
+      "llm_metadata": {
+        "model": "openai/gpt-oss-20b",
+        "latency_ms": 857.28,
+        "prompt_tokens": 463,
+        "completion_tokens": 285,
+        "reasoning_tokens": 216,
+        "total_tokens": 748,
+        "cost_usd": 0.00012022
+      },
+      "cost_usd": 0.00012022
+    },
+    {
+      "id": "it_001",
+      "category": "IT",
+      "question": "How should company information be protected?",
+      "passed": true,
+      "keyword_pass": true,
+      "source_pass": true,
+      "answer": "Company information should be protected by:\n\n1. **Keeping all confidential company and customer information secure** – this includes customer data, business strategies, financial information, contracts, software, source code, product roadmaps, internal communications, and employee information.  \n2. **Sharing information only with authorized individuals who have a legitimate business need** – no confidential data should be disclosed to anyone outside that group.  \n3. **Safeguarding company intellectual property** – software, source code, designs, documentation, logos, product concepts, business processes, databases, and research must not be used or disclosed without proper authorization.  \n4. **Classifying and protecting company data appropriately** – sensitive data such as customer records, employee records, financial information, credentials, API keys, source code, product designs, and internal reports must be handled with the correct level of security.  \n5. **Preventing unauthorized copying or transfer** – sensitive data must not be copied to unauthorized personal devices or services.  \n6. **Handling customer complaints promptly and professionally** – while addressing complaints, ensure that any customer information remains protected and is only shared with those who are authorized to handle the issue.  \n\nBy following these practices, the company ensures that all sensitive and intellectual property information remains secure and is only accessed by those with a legitimate business need.",
+      "sources": [
+        "company_policy.pdf",
+        "it_policy.pdf"
+      ],
+      "expected_sources": [
+        "it_policy.pdf"
+      ],
+      "tools_used": [
+        "search_documents"
+      ],
+      "latency_ms": 1054.53,
+      "retrieval_metadata": {
+        "documents_retrieved": 3,
+        "context_chars": 1491,
+        "sources": [
+          "company_policy.pdf",
+          "it_policy.pdf"
+        ],
+        "scores": [
+          0.4712,
+          0.6871,
+          0.7065
+        ],
+        "latency_ms": 13.62
+      },
+      "llm_metadata": {
+        "model": "openai/gpt-oss-20b",
+        "latency_ms": 1017.77,
+        "prompt_tokens": 461,
+        "completion_tokens": 458,
+        "reasoning_tokens": 185,
+        "total_tokens": 919,
+        "cost_usd": 0.00017197
+      },
+      "cost_usd": 0.00017197
+    },
+    {
+      "id": "out_of_scope_001",
+      "category": "Out-of-scope",
+      "question": "What is the current stock price of the company?",
+      "passed": true,
+      "keyword_pass": true,
+      "source_pass": true,
+      "answer": "I don't have enough information in the provided documents to answer that question.",
+      "sources": [],
+      "expected_sources": [],
+      "tools_used": [],
+      "latency_ms": 18.05,
+      "retrieval_metadata": {},
+      "llm_metadata": {},
+      "cost_usd": 0.0
+    }
+  ],
+  "limitations": [
+    "The evaluation dataset currently contains only five cases.",
+    "Keyword matching is not equivalent to semantic answer evaluation.",
+    "Cold-start latency is based on the first successful evaluation case and is not a controlled process-restart benchmark.",
+    "Cost projections assume the evaluation average represents production traffic.",
+    "Retrieval distance is embedding-model-specific and should not be interpreted as a universal relevance threshold."
+  ]
 }

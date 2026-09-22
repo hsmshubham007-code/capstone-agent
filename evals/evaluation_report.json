@@ -2,42 +2,89 @@
     "evaluation": {
         "summary": {
             "total_cases": 5,
-            "passed_cases": 5,
-            "failed_cases": 0,
+            "passed": 5,
+            "failed": 0,
+            "errors": 0,
+            "completion_rate": 1.0,
             "pass_rate": 1.0,
-            "average_latency_ms": 4369.04,
-            "p50_latency_ms": 744.07,
-            "p95_latency_ms": 15593.67
+            "error_rate": 0.0,
+            "average_latency_ms": 4665.92,
+            "p50_latency_ms": 892.52,
+            "p95_latency_ms": 16808.17,
+            "cold_start_latency_ms": 20746.57,
+            "warm_average_latency_ms": 645.75,
+            "warm_p50_latency_ms": 755.21,
+            "warm_p95_latency_ms": 1030.23
         },
         "categories": {
             "HR": {
-                "passed": 2,
                 "total": 2,
-                "pass_rate": 1.0
+                "passed": 2,
+                "errors": 0
             },
             "Company": {
-                "passed": 1,
                 "total": 1,
-                "pass_rate": 1.0
+                "passed": 1,
+                "errors": 0
             },
             "IT": {
-                "passed": 1,
                 "total": 1,
-                "pass_rate": 1.0
+                "passed": 1,
+                "errors": 0
             },
             "Out-of-scope": {
-                "passed": 1,
                 "total": 1,
-                "pass_rate": 1.0
+                "passed": 1,
+                "errors": 0
             }
+        },
+        "retrieval": {
+            "source_hit_rate": 1.0,
+            "in_scope_retrieval_success_rate": 1.0,
+            "in_scope_cases_with_evidence": 4,
+            "out_of_scope_no_evidence_rate": 1.0,
+            "average_documents_retrieved": 3,
+            "average_retrieval_distance": 0.8194
+        },
+        "cost": {
+            "average_prompt_tokens": 470.75,
+            "average_completion_tokens": 334.75,
+            "average_reasoning_tokens": 197.75,
+            "average_total_tokens": 805.5,
+            "average_cost_per_query_usd": 0.00013573,
+            "total_evaluation_cost_usd": 0.00054291,
+            "projected_1000_queries_usd": null,
+            "projected_10000_queries_usd": null,
+            "projected_100000_queries_usd": null
         },
         "latency": {
             "count": 5,
-            "mean_ms": 4369.04,
-            "p50_ms": 744.07,
-            "p95_ms": 15593.67,
-            "min_ms": 15.22,
-            "max_ms": 19205.33
+            "mean_ms": 4665.92,
+            "p50_ms": 892.52,
+            "p95_ms": 16808.16,
+            "min_ms": 18.05,
+            "max_ms": 20746.57
+        },
+        "latency_diagnostics": {
+            "cold_start": {
+                "retrieval_ms": 18750.75,
+                "llm_ms": 1967.55
+            },
+            "warm": {
+                "request_count": 4,
+                "retrieval": {
+                    "count": 3,
+                    "average_ms": 13.85,
+                    "p50_ms": 13.62,
+                    "p95_ms": 15.07
+                },
+                "llm": {
+                    "count": 3,
+                    "average_ms": 820.35,
+                    "p50_ms": 857.28,
+                    "p95_ms": 1001.72
+                }
+            }
         }
     },
     "injection_resistance": {
@@ -50,11 +97,40 @@
         "available": true
     },
     "limitations": [
-        "The quality evaluation contains only a small number of cases.",
-        "Quality scoring currently uses keyword-based checks.",
+        "The quality evaluation contains only five cases.",
+        "Quality scoring currently uses keyword-based checks rather than semantic human evaluation.",
         "Prompt-injection evaluation contains only a small attack set.",
         "Infrastructure errors must be distinguished from model-quality failures.",
+        "The first evaluation request had a cold-start latency of approximately 20.7 seconds.",
         "Latency is affected by cold starts, model service latency, retrieval, and network conditions.",
-        "Projected costs depend on token distributions and production traffic volume."
-    ]
+        "Measured evaluation cost and modeled production cost use different assumptions and should not be treated as the same metric.",
+        "Projected costs depend on token distributions, model routing, and production traffic volume.",
+        "Retrieval distance thresholds are specific to the selected embedding model and vector-store scoring behavior."
+    ],
+    "cost_projection": {
+        "assumptions": {
+            "base_monthly_queries": 10000,
+            "volume_multiplier": 10,
+            "projected_monthly_queries": 100000,
+            "prompt_tokens_per_query": 1000,
+            "completion_tokens_per_query": 300,
+            "large_model_fraction": 0.1
+        },
+        "per_query": {
+            "20b_usd": 0.000165,
+            "120b_usd": 0.00033,
+            "routed_usd": 0.00018150000000000002,
+            "routing_savings_percentage": 0.44999999999999996
+        },
+        "monthly_base": {
+            "always_20b_usd": 1.65,
+            "always_120b_usd": 3.3,
+            "routed_usd": 1.8150000000000002
+        },
+        "monthly_10x": {
+            "always_20b_usd": 16.5,
+            "always_120b_usd": 33.0,
+            "routed_usd": 18.150000000000002
+        }
+    }
 }

@@ -28,8 +28,7 @@ GROQ_BASE_URL = (
 
 class LLMServiceError(Exception):
     """
-    Raised when the Groq LLM cannot generate
-    an answer.
+    Raised when the Groq LLM cannot generate an answer.
     """
 
 
@@ -120,6 +119,154 @@ def calculate_cost(
 
 
 # =========================================================
+# Usage extraction helper
+# =========================================================
+
+def _extract_usage(usage):
+    """
+    Extract token usage from different usage object formats.
+
+    Supports:
+
+    1. OpenAI/Groq usage objects with model_dump()
+    2. Dictionary-based usage
+    3. Simple mock/test objects with attributes
+    """
+
+    prompt_tokens = 0
+    completion_tokens = 0
+    total_tokens = 0
+    reasoning_tokens = 0
+
+    if not usage:
+        return {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "reasoning_tokens": 0,
+            "total_tokens": 0,
+        }
+
+    # -----------------------------------------------------
+    # Convert usage into a dictionary when possible
+    # -----------------------------------------------------
+
+    if hasattr(usage, "model_dump"):
+        usage_data = usage.model_dump()
+
+    elif hasattr(usage, "to_dict"):
+        usage_data = usage.to_dict()
+
+    elif isinstance(usage, dict):
+        usage_data = usage
+
+    else:
+        usage_data = {
+            "prompt_tokens": getattr(
+                usage,
+                "prompt_tokens",
+                0,
+            ),
+            "completion_tokens": getattr(
+                usage,
+                "completion_tokens",
+                0,
+            ),
+            "total_tokens": getattr(
+                usage,
+                "total_tokens",
+                0,
+            ),
+            "completion_tokens_details": getattr(
+                usage,
+                "completion_tokens_details",
+                None,
+            ),
+        }
+
+    # -----------------------------------------------------
+    # Basic token counts
+    # -----------------------------------------------------
+
+    prompt_tokens = (
+        usage_data.get(
+            "prompt_tokens",
+            0,
+        )
+        or 0
+    )
+
+    completion_tokens = (
+        usage_data.get(
+            "completion_tokens",
+            0,
+        )
+        or 0
+    )
+
+    total_tokens = (
+        usage_data.get(
+            "total_tokens",
+            0,
+        )
+        or 0
+    )
+
+    # -----------------------------------------------------
+    # Reasoning tokens
+    # -----------------------------------------------------
+
+    completion_details = (
+        usage_data.get(
+            "completion_tokens_details"
+        )
+        or {}
+    )
+
+    if hasattr(
+        completion_details,
+        "model_dump",
+    ):
+        completion_details = (
+            completion_details.model_dump()
+        )
+
+    elif hasattr(
+        completion_details,
+        "to_dict",
+    ):
+        completion_details = (
+            completion_details.to_dict()
+        )
+
+    elif not isinstance(
+        completion_details,
+        dict,
+    ):
+        completion_details = {
+            "reasoning_tokens": getattr(
+                completion_details,
+                "reasoning_tokens",
+                0,
+            )
+        }
+
+    reasoning_tokens = (
+        completion_details.get(
+            "reasoning_tokens",
+            0,
+        )
+        or 0
+    )
+
+    return {
+        "prompt_tokens": prompt_tokens,
+        "completion_tokens": completion_tokens,
+        "reasoning_tokens": reasoning_tokens,
+        "total_tokens": total_tokens,
+    }
+
+
+# =========================================================
 # LLM generation with metadata
 # =========================================================
 
@@ -130,14 +277,16 @@ def generate_answer_with_metadata(
     """
     Generate an answer using the Groq LLM.
 
-    Returns both the answer and per-request
-    monitoring metadata.
+    Returns both the answer and per-request monitoring
+    metadata.
 
     Metadata includes:
+
     - model
     - latency
     - prompt tokens
     - completion tokens
+    - reasoning tokens
     - total tokens
     - estimated cost
     """
@@ -167,6 +316,10 @@ Answer:
 
     api_key = get_api_key()
     model = get_model()
+
+    # -----------------------------------------------------
+    # Configuration validation
+    # -----------------------------------------------------
 
     if not api_key:
         metrics.increment(
@@ -201,6 +354,10 @@ Answer:
     start_time = time.perf_counter()
 
     try:
+        # -------------------------------------------------
+        # Call Groq
+        # -------------------------------------------------
+
         client = get_client()
 
         response = client.chat.completions.create(
@@ -219,36 +376,45 @@ Answer:
             - start_time
         ) * 1000
 
+        # -------------------------------------------------
+        # Extract usage metadata
+        # -------------------------------------------------
+
         usage = getattr(
             response,
             "usage",
             None,
         )
 
-        prompt_tokens = 0
-        completion_tokens = 0
-        total_tokens = 0
+        usage_data = _extract_usage(
+            usage
+        )
 
-        if usage:
-            prompt_tokens = getattr(
-                usage,
-                "prompt_tokens",
-                0,
-            ) or 0
+        prompt_tokens = usage_data[
+            "prompt_tokens"
+        ]
 
-            completion_tokens = getattr(
-                usage,
-                "completion_tokens",
-                0,
-            ) or 0
+        completion_tokens = usage_data[
+            "completion_tokens"
+        ]
 
-            total_tokens = getattr(
-                usage,
-                "total_tokens",
-                0,
-            ) or 0
+        reasoning_tokens = usage_data[
+            "reasoning_tokens"
+        ]
+
+        total_tokens = usage_data[
+            "total_tokens"
+        ]
+
+        # -------------------------------------------------
+        # Metrics
+        # -------------------------------------------------
 
         metrics.observe_latency(
+            latency_ms
+        )
+
+        metrics.observe_llm_latency(
             latency_ms
         )
 
@@ -272,6 +438,10 @@ Answer:
             "llm_requests_success_total"
         )
 
+        # -------------------------------------------------
+        # Logging
+        # -------------------------------------------------
+
         logger.info(
             "LLM request completed",
             extra={
@@ -281,9 +451,8 @@ Answer:
                     2,
                 ),
                 "prompt_tokens": prompt_tokens,
-                "completion_tokens": (
-                    completion_tokens
-                ),
+                "completion_tokens": completion_tokens,
+                "reasoning_tokens": reasoning_tokens,
                 "total_tokens": total_tokens,
                 "cost_usd": round(
                     cost_usd,
@@ -291,6 +460,10 @@ Answer:
                 ),
             },
         )
+
+        # -------------------------------------------------
+        # Extract answer
+        # -------------------------------------------------
 
         answer = (
             response
@@ -308,6 +481,10 @@ Answer:
                 "The Groq LLM returned an empty response."
             )
 
+        # -------------------------------------------------
+        # Return answer + metadata
+        # -------------------------------------------------
+
         return {
             "answer": answer.strip(),
             "metadata": {
@@ -318,6 +495,7 @@ Answer:
                 ),
                 "prompt_tokens": prompt_tokens,
                 "completion_tokens": completion_tokens,
+                "reasoning_tokens": reasoning_tokens,
                 "total_tokens": total_tokens,
                 "cost_usd": round(
                     cost_usd,
@@ -340,6 +518,10 @@ Answer:
         )
 
         metrics.observe_latency(
+            latency_ms
+        )
+
+        metrics.observe_llm_latency(
             latency_ms
         )
 

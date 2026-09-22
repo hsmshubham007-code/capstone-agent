@@ -89,7 +89,9 @@ def approval_node(
         "question"
     ]
 
-    if tool_name == "update_employee_record":
+    if tool_name == (
+        "update_employee_record"
+    ):
 
         employee_match = re.search(
             r"employee\s+(EMP\d+)",
@@ -161,6 +163,7 @@ def approval_node(
         "approval_status": "PENDING",
         "sources": [],
         "tools_used": [],
+        "retrieval_metadata": {},
         "llm_metadata": None,
         "trace": state["trace"]
         + [
@@ -234,12 +237,20 @@ def search_node(
             "NO_RELEVANT_RESULTS"
         )
 
+    retrieval_metadata = result.get(
+        "retrieval_metadata",
+        {},
+    )
+
     return {
         "answer": answer,
         "sources": sources,
         "tools_used": [
             result["name"]
         ],
+        "retrieval_metadata": (
+            retrieval_metadata
+        ),
         "llm_metadata": result.get(
             "llm_metadata"
         ),
@@ -252,6 +263,9 @@ def search_node(
                 "results": results,
                 "retrieval_status": (
                     retrieval_status
+                ),
+                "retrieval_metadata": (
+                    retrieval_metadata
                 ),
                 "duration": duration,
             }
@@ -269,6 +283,7 @@ def no_tool_node(
         ),
         "sources": [],
         "tools_used": [],
+        "retrieval_metadata": {},
         "llm_metadata": None,
         "trace": state["trace"]
         + [

@@ -81,6 +81,7 @@ def warmup_retrieval():
 
         raise
 
+
 # =========================================================
 # Request / Response models
 # =========================================================
@@ -338,6 +339,9 @@ def get_metrics():
     - average latency
     - p50 latency
     - p95 latency
+    - chat latency
+    - retrieval latency
+    - LLM latency
     - LLM token usage
     - LLM errors
     - cost information
@@ -365,6 +369,7 @@ def chat(
     # IMPORTANT:
     # request = ChatRequest
     # http_request = FastAPI Request
+
     request_id = getattr(
         http_request.state,
         "request_id",
@@ -419,6 +424,11 @@ def chat(
             - start_time
         ) * 1000
 
+        # Record complete chat/agent latency
+        metrics.observe_chat_latency(
+            latency_ms
+        )
+
         metrics.increment(
             "llm_service_errors_total"
         )
@@ -455,6 +465,11 @@ def chat(
             - start_time
         ) * 1000
 
+        # Record complete chat/agent latency
+        metrics.observe_chat_latency(
+            latency_ms
+        )
+
         metrics.increment(
             "agent_errors_total"
         )
@@ -487,10 +502,18 @@ def chat(
             },
         ) from exc
 
+    # -----------------------------------------------------
+    # Successful chat latency
+    # -----------------------------------------------------
+
     latency_ms = (
         time.perf_counter()
         - start_time
     ) * 1000
+
+    metrics.observe_chat_latency(
+        latency_ms
+    )
 
     metrics.increment(
         "chat_requests_success_total"

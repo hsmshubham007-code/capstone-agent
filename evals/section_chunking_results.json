@@ -1,0 +1,468 @@
+{
+  "configuration": {
+    "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+    "chunking": "numbered policy sections",
+    "collection": "section_chunk_test"
+  },
+  "results": {
+    "1": {
+      "in_scope_success": 2,
+      "in_scope_total": 4,
+      "in_scope_rate": 0.5,
+      "out_of_scope_clean": 0,
+      "out_of_scope_total": 1,
+      "out_of_scope_rate": 0.0,
+      "cases": [
+        {
+          "id": "hr_001",
+          "category": "HR",
+          "question": "What does the company say about professional conduct?",
+          "expected_sources": [
+            "hr_policy.pdf"
+          ],
+          "retrieved_sources": [
+            "company_policy.pdf"
+          ],
+          "expected_source_found": false,
+          "results": [
+            {
+              "rank": 1,
+              "source": "company_policy.pdf",
+              "section_number": "4",
+              "section_title": "Professional Conduct",
+              "distance": 0.9022
+            }
+          ]
+        },
+        {
+          "id": "hr_002",
+          "category": "HR",
+          "question": "What should employees do about workplace harassment?",
+          "expected_sources": [
+            "hr_policy.pdf"
+          ],
+          "retrieved_sources": [
+            "hr_policy.pdf"
+          ],
+          "expected_source_found": true,
+          "results": [
+            {
+              "rank": 1,
+              "source": "hr_policy.pdf",
+              "section_number": "12",
+              "section_title": "Anti-Harassment",
+              "distance": 0.6075
+            }
+          ]
+        },
+        {
+          "id": "company_001",
+          "category": "Company",
+          "question": "What should employees do if they identify a policy violation?",
+          "expected_sources": [
+            "company_policy.pdf"
+          ],
+          "retrieved_sources": [
+            "hr_policy.pdf"
+          ],
+          "expected_source_found": false,
+          "results": [
+            {
+              "rank": 1,
+              "source": "hr_policy.pdf",
+              "section_number": "17",
+              "section_title": "Disciplinary Action",
+              "distance": 0.7056
+            }
+          ]
+        },
+        {
+          "id": "it_001",
+          "category": "IT",
+          "question": "How should company information be protected?",
+          "expected_sources": [
+            "it_policy.pdf"
+          ],
+          "retrieved_sources": [
+            "it_policy.pdf"
+          ],
+          "expected_source_found": true,
+          "results": [
+            {
+              "rank": 1,
+              "source": "it_policy.pdf",
+              "section_number": "10",
+              "section_title": "Data Protection",
+              "distance": 0.4741
+            }
+          ]
+        },
+        {
+          "id": "out_of_scope_001",
+          "category": "Out-of-scope",
+          "question": "What is the current stock price of the company?",
+          "expected_sources": [],
+          "retrieved_sources": [
+            "hr_policy.pdf"
+          ],
+          "expected_source_found": false,
+          "results": [
+            {
+              "rank": 1,
+              "source": "hr_policy.pdf",
+              "section_number": "17",
+              "section_title": "Disciplinary Action",
+              "distance": 1.5807
+            }
+          ]
+        }
+      ]
+    },
+    "2": {
+      "in_scope_success": 4,
+      "in_scope_total": 4,
+      "in_scope_rate": 1.0,
+      "out_of_scope_clean": 0,
+      "out_of_scope_total": 1,
+      "out_of_scope_rate": 0.0,
+      "cases": [
+        {
+          "id": "hr_001",
+          "category": "HR",
+          "question": "What does the company say about professional conduct?",
+          "expected_sources": [
+            "hr_policy.pdf"
+          ],
+          "retrieved_sources": [
+            "company_policy.pdf",
+            "hr_policy.pdf"
+          ],
+          "expected_source_found": true,
+          "results": [
+            {
+              "rank": 1,
+              "source": "company_policy.pdf",
+              "section_number": "4",
+              "section_title": "Professional Conduct",
+              "distance": 0.9022
+            },
+            {
+              "rank": 2,
+              "source": "hr_policy.pdf",
+              "section_number": "11",
+              "section_title": "Workplace Conduct",
+              "distance": 1.0407
+            }
+          ]
+        },
+        {
+          "id": "hr_002",
+          "category": "HR",
+          "question": "What should employees do about workplace harassment?",
+          "expected_sources": [
+            "hr_policy.pdf"
+          ],
+          "retrieved_sources": [
+            "hr_policy.pdf",
+            "hr_policy.pdf"
+          ],
+          "expected_source_found": true,
+          "results": [
+            {
+              "rank": 1,
+              "source": "hr_policy.pdf",
+              "section_number": "12",
+              "section_title": "Anti-Harassment",
+              "distance": 0.6075
+            },
+            {
+              "rank": 2,
+              "source": "hr_policy.pdf",
+              "section_number": "11",
+              "section_title": "Workplace Conduct",
+              "distance": 0.6519
+            }
+          ]
+        },
+        {
+          "id": "company_001",
+          "category": "Company",
+          "question": "What should employees do if they identify a policy violation?",
+          "expected_sources": [
+            "company_policy.pdf"
+          ],
+          "retrieved_sources": [
+            "hr_policy.pdf",
+            "company_policy.pdf"
+          ],
+          "expected_source_found": true,
+          "results": [
+            {
+              "rank": 1,
+              "source": "hr_policy.pdf",
+              "section_number": "17",
+              "section_title": "Disciplinary Action",
+              "distance": 0.7056
+            },
+            {
+              "rank": 2,
+              "source": "company_policy.pdf",
+              "section_number": "23",
+              "section_title": "Disciplinary Measures",
+              "distance": 0.8688
+            }
+          ]
+        },
+        {
+          "id": "it_001",
+          "category": "IT",
+          "question": "How should company information be protected?",
+          "expected_sources": [
+            "it_policy.pdf"
+          ],
+          "retrieved_sources": [
+            "it_policy.pdf",
+            "company_policy.pdf"
+          ],
+          "expected_source_found": true,
+          "results": [
+            {
+              "rank": 1,
+              "source": "it_policy.pdf",
+              "section_number": "10",
+              "section_title": "Data Protection",
+              "distance": 0.4741
+            },
+            {
+              "rank": 2,
+              "source": "company_policy.pdf",
+              "section_number": "9",
+              "section_title": "Confidential Information",
+              "distance": 0.4823
+            }
+          ]
+        },
+        {
+          "id": "out_of_scope_001",
+          "category": "Out-of-scope",
+          "question": "What is the current stock price of the company?",
+          "expected_sources": [],
+          "retrieved_sources": [
+            "hr_policy.pdf",
+            "company_policy.pdf"
+          ],
+          "expected_source_found": false,
+          "results": [
+            {
+              "rank": 1,
+              "source": "hr_policy.pdf",
+              "section_number": "17",
+              "section_title": "Disciplinary Action",
+              "distance": 1.5807
+            },
+            {
+              "rank": 2,
+              "source": "company_policy.pdf",
+              "section_number": "22",
+              "section_title": "Non-Retaliation",
+              "distance": 1.5966
+            }
+          ]
+        }
+      ]
+    },
+    "3": {
+      "in_scope_success": 4,
+      "in_scope_total": 4,
+      "in_scope_rate": 1.0,
+      "out_of_scope_clean": 0,
+      "out_of_scope_total": 1,
+      "out_of_scope_rate": 0.0,
+      "cases": [
+        {
+          "id": "hr_001",
+          "category": "HR",
+          "question": "What does the company say about professional conduct?",
+          "expected_sources": [
+            "hr_policy.pdf"
+          ],
+          "retrieved_sources": [
+            "company_policy.pdf",
+            "hr_policy.pdf",
+            "hr_policy.pdf"
+          ],
+          "expected_source_found": true,
+          "results": [
+            {
+              "rank": 1,
+              "source": "company_policy.pdf",
+              "section_number": "4",
+              "section_title": "Professional Conduct",
+              "distance": 0.9022
+            },
+            {
+              "rank": 2,
+              "source": "hr_policy.pdf",
+              "section_number": "11",
+              "section_title": "Workplace Conduct",
+              "distance": 1.0407
+            },
+            {
+              "rank": 3,
+              "source": "hr_policy.pdf",
+              "section_number": "17",
+              "section_title": "Disciplinary Action",
+              "distance": 1.0874
+            }
+          ]
+        },
+        {
+          "id": "hr_002",
+          "category": "HR",
+          "question": "What should employees do about workplace harassment?",
+          "expected_sources": [
+            "hr_policy.pdf"
+          ],
+          "retrieved_sources": [
+            "hr_policy.pdf",
+            "hr_policy.pdf",
+            "hr_policy.pdf"
+          ],
+          "expected_source_found": true,
+          "results": [
+            {
+              "rank": 1,
+              "source": "hr_policy.pdf",
+              "section_number": "12",
+              "section_title": "Anti-Harassment",
+              "distance": 0.6075
+            },
+            {
+              "rank": 2,
+              "source": "hr_policy.pdf",
+              "section_number": "11",
+              "section_title": "Workplace Conduct",
+              "distance": 0.6519
+            },
+            {
+              "rank": 3,
+              "source": "hr_policy.pdf",
+              "section_number": "16",
+              "section_title": "Grievance Procedure",
+              "distance": 0.9578
+            }
+          ]
+        },
+        {
+          "id": "company_001",
+          "category": "Company",
+          "question": "What should employees do if they identify a policy violation?",
+          "expected_sources": [
+            "company_policy.pdf"
+          ],
+          "retrieved_sources": [
+            "hr_policy.pdf",
+            "company_policy.pdf",
+            "it_policy.pdf"
+          ],
+          "expected_source_found": true,
+          "results": [
+            {
+              "rank": 1,
+              "source": "hr_policy.pdf",
+              "section_number": "17",
+              "section_title": "Disciplinary Action",
+              "distance": 0.7056
+            },
+            {
+              "rank": 2,
+              "source": "company_policy.pdf",
+              "section_number": "23",
+              "section_title": "Disciplinary Measures",
+              "distance": 0.8688
+            },
+            {
+              "rank": 3,
+              "source": "it_policy.pdf",
+              "section_number": "22",
+              "section_title": "Policy Violations",
+              "distance": 0.8937
+            }
+          ]
+        },
+        {
+          "id": "it_001",
+          "category": "IT",
+          "question": "How should company information be protected?",
+          "expected_sources": [
+            "it_policy.pdf"
+          ],
+          "retrieved_sources": [
+            "it_policy.pdf",
+            "company_policy.pdf",
+            "company_policy.pdf"
+          ],
+          "expected_source_found": true,
+          "results": [
+            {
+              "rank": 1,
+              "source": "it_policy.pdf",
+              "section_number": "10",
+              "section_title": "Data Protection",
+              "distance": 0.4741
+            },
+            {
+              "rank": 2,
+              "source": "company_policy.pdf",
+              "section_number": "9",
+              "section_title": "Confidential Information",
+              "distance": 0.4823
+            },
+            {
+              "rank": 3,
+              "source": "company_policy.pdf",
+              "section_number": "10",
+              "section_title": "Intellectual Property",
+              "distance": 0.6675
+            }
+          ]
+        },
+        {
+          "id": "out_of_scope_001",
+          "category": "Out-of-scope",
+          "question": "What is the current stock price of the company?",
+          "expected_sources": [],
+          "retrieved_sources": [
+            "hr_policy.pdf",
+            "company_policy.pdf",
+            "company_policy.pdf"
+          ],
+          "expected_source_found": false,
+          "results": [
+            {
+              "rank": 1,
+              "source": "hr_policy.pdf",
+              "section_number": "17",
+              "section_title": "Disciplinary Action",
+              "distance": 1.5807
+            },
+            {
+              "rank": 2,
+              "source": "company_policy.pdf",
+              "section_number": "22",
+              "section_title": "Non-Retaliation",
+              "distance": 1.5966
+            },
+            {
+              "rank": 3,
+              "source": "company_policy.pdf",
+              "section_number": "25",
+              "section_title": "Policy Review",
+              "distance": 1.6558
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

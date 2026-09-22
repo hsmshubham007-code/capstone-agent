@@ -16,8 +16,12 @@ def search_documents_tool(
 
     Every execution is recorded in the audit trail.
 
-    The result also includes LLM metadata when
-    an LLM call was required.
+    The result includes:
+    - answer
+    - sources
+    - retrieval metadata
+    - LLM metadata
+    - retrieved document previews
     """
 
     from app.context import (
@@ -50,11 +54,19 @@ def search_documents_tool(
 
         output = {
             "name": "search_documents",
+
             "answer": result["answer"],
+
             "sources": result["sources"],
+
+            "retrieval_metadata": result.get(
+                "retrieval_metadata"
+            ),
+
             "llm_metadata": result.get(
                 "llm_metadata"
             ),
+
             "results": [
                 {
                     "source": doc.metadata.get(
@@ -92,7 +104,6 @@ def search_documents_tool(
         return output
 
     except Exception as error:
-
         if request_id:
             record_tool_call(
                 request_id=request_id,

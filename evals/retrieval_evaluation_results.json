@@ -1,0 +1,403 @@
+{
+  "dataset": "C:\\Users\\HSM\\Desktop\\week 2\\week2day5proj1\\evals\\evaluation_dataset.json",
+  "k_values": [
+    1,
+    2,
+    3
+  ],
+  "results": {
+    "1": {
+      "in_scope_success": 3,
+      "in_scope_total": 4,
+      "in_scope_success_rate": 0.75,
+      "out_of_scope_no_evidence": 1,
+      "out_of_scope_total": 1,
+      "out_of_scope_no_evidence_rate": 1.0,
+      "cases": [
+        {
+          "id": "hr_001",
+          "category": "HR",
+          "question": "What does the company say about professional conduct?",
+          "expected_sources": [
+            "hr_policy.pdf"
+          ],
+          "retrieved_sources": [
+            "hr_policy.pdf"
+          ],
+          "expected_source_found": true,
+          "results": [
+            {
+              "rank": 1,
+              "source": "hr_policy.pdf",
+              "distance": 1.0407,
+              "content_preview": "11. Workplace Conduct \nEmployees must: \n Treat colleagues respectfully. \n Communicate professionally. \n Follow company procedures. \n Protect company property. \n Maintain confidentiality. \n Avoid conflicts of interest. \n Follow applicable laws and regulations. \nHarassment, discrimination, bull"
+            }
+          ]
+        },
+        {
+          "id": "hr_002",
+          "category": "HR",
+          "question": "What should employees do about workplace harassment?",
+          "expected_sources": [
+            "hr_policy.pdf"
+          ],
+          "retrieved_sources": [
+            "hr_policy.pdf"
+          ],
+          "expected_source_found": true,
+          "results": [
+            {
+              "rank": 1,
+              "source": "hr_policy.pdf",
+              "distance": 0.6519,
+              "content_preview": "11. Workplace Conduct \nEmployees must: \n Treat colleagues respectfully. \n Communicate professionally. \n Follow company procedures. \n Protect company property. \n Maintain confidentiality. \n Avoid conflicts of interest. \n Follow applicable laws and regulations. \nHarassment, discrimination, bull"
+            }
+          ]
+        },
+        {
+          "id": "company_001",
+          "category": "Company",
+          "question": "What should employees do if they identify a policy violation?",
+          "expected_sources": [
+            "company_policy.pdf"
+          ],
+          "retrieved_sources": [
+            "company_policy.pdf"
+          ],
+          "expected_source_found": true,
+          "results": [
+            {
+              "rank": 1,
+              "source": "company_policy.pdf",
+              "distance": 0.7044,
+              "content_preview": "Employees who become aware of serious violations should report them through appropriate \nchannels such as: \n Reporting Manager \n HR Department \n IT/Security Department \n Senior Management \nReports should be made honestly and in good faith. \n22. Non-Retaliation \nThe company does not tolerate reta"
+            }
+          ]
+        },
+        {
+          "id": "it_001",
+          "category": "IT",
+          "question": "How should company information be protected?",
+          "expected_sources": [
+            "it_policy.pdf"
+          ],
+          "retrieved_sources": [
+            "company_policy.pdf"
+          ],
+          "expected_source_found": false,
+          "results": [
+            {
+              "rank": 1,
+              "source": "company_policy.pdf",
+              "distance": 0.4712,
+              "content_preview": " Provide accurate information. \n Protect customer information. \n Communicate clearly. \n Meet agreed responsibilities. \n Escalate customer issues appropriately. \n Avoid making unauthorized commitments. \nCustomer complaints should be handled promptly and professionally. \n9. Confidential Informat"
+            }
+          ]
+        },
+        {
+          "id": "out_of_scope_001",
+          "category": "Out-of-scope",
+          "question": "What is the current stock price of the company?",
+          "expected_sources": [],
+          "retrieved_sources": [],
+          "expected_source_found": true,
+          "results": []
+        }
+      ]
+    },
+    "2": {
+      "in_scope_success": 4,
+      "in_scope_total": 4,
+      "in_scope_success_rate": 1.0,
+      "out_of_scope_no_evidence": 1,
+      "out_of_scope_total": 1,
+      "out_of_scope_no_evidence_rate": 1.0,
+      "cases": [
+        {
+          "id": "hr_001",
+          "category": "HR",
+          "question": "What does the company say about professional conduct?",
+          "expected_sources": [
+            "hr_policy.pdf"
+          ],
+          "retrieved_sources": [
+            "hr_policy.pdf",
+            "company_policy.pdf"
+          ],
+          "expected_source_found": true,
+          "results": [
+            {
+              "rank": 1,
+              "source": "hr_policy.pdf",
+              "distance": 1.0407,
+              "content_preview": "11. Workplace Conduct \nEmployees must: \n Treat colleagues respectfully. \n Communicate professionally. \n Follow company procedures. \n Protect company property. \n Maintain confidentiality. \n Avoid conflicts of interest. \n Follow applicable laws and regulations. \nHarassment, discrimination, bull"
+            },
+            {
+              "rank": 2,
+              "source": "company_policy.pdf",
+              "distance": 1.076,
+              "content_preview": "Every employee is responsible for: \n Understanding applicable policies. \n Following company procedures. \n Protecting company information. \n Reporting suspected violations. \n Maintaining professional behavior. \n Completing required training. \n21. Reporting Violations"
+            }
+          ]
+        },
+        {
+          "id": "hr_002",
+          "category": "HR",
+          "question": "What should employees do about workplace harassment?",
+          "expected_sources": [
+            "hr_policy.pdf"
+          ],
+          "retrieved_sources": [
+            "hr_policy.pdf",
+            "hr_policy.pdf"
+          ],
+          "expected_source_found": true,
+          "results": [
+            {
+              "rank": 1,
+              "source": "hr_policy.pdf",
+              "distance": 0.6519,
+              "content_preview": "11. Workplace Conduct \nEmployees must: \n Treat colleagues respectfully. \n Communicate professionally. \n Follow company procedures. \n Protect company property. \n Maintain confidentiality. \n Avoid conflicts of interest. \n Follow applicable laws and regulations. \nHarassment, discrimination, bull"
+            },
+            {
+              "rank": 2,
+              "source": "hr_policy.pdf",
+              "distance": 0.884,
+              "content_preview": "12. Anti-Harassment \nThe company is committed to maintaining a professional and respectful workplace. \nEmployees can report inappropriate behavior to HR or an appropriate designated authority. \nReports will be handled confidentially to the extent reasonably possible and investigated \naccording to co"
+            }
+          ]
+        },
+        {
+          "id": "company_001",
+          "category": "Company",
+          "question": "What should employees do if they identify a policy violation?",
+          "expected_sources": [
+            "company_policy.pdf"
+          ],
+          "retrieved_sources": [
+            "company_policy.pdf",
+            "company_policy.pdf"
+          ],
+          "expected_source_found": true,
+          "results": [
+            {
+              "rank": 1,
+              "source": "company_policy.pdf",
+              "distance": 0.7044,
+              "content_preview": "Employees who become aware of serious violations should report them through appropriate \nchannels such as: \n Reporting Manager \n HR Department \n IT/Security Department \n Senior Management \nReports should be made honestly and in good faith. \n22. Non-Retaliation \nThe company does not tolerate reta"
+            },
+            {
+              "rank": 2,
+              "source": "company_policy.pdf",
+              "distance": 0.7471,
+              "content_preview": " Legal action \n24. Policy Exceptions \nExceptions to company policies require appropriate management approval. \nEmployees should not assume that an exception exists simply because a policy requirement is \ninconvenient. \n25. Policy Review \nSenior Management shall periodically review this Corporate Po"
+            }
+          ]
+        },
+        {
+          "id": "it_001",
+          "category": "IT",
+          "question": "How should company information be protected?",
+          "expected_sources": [
+            "it_policy.pdf"
+          ],
+          "retrieved_sources": [
+            "company_policy.pdf",
+            "it_policy.pdf"
+          ],
+          "expected_source_found": true,
+          "results": [
+            {
+              "rank": 1,
+              "source": "company_policy.pdf",
+              "distance": 0.4712,
+              "content_preview": " Provide accurate information. \n Protect customer information. \n Communicate clearly. \n Meet agreed responsibilities. \n Escalate customer issues appropriately. \n Avoid making unauthorized commitments. \nCustomer complaints should be handled promptly and professionally. \n9. Confidential Informat"
+            },
+            {
+              "rank": 2,
+              "source": "it_policy.pdf",
+              "distance": 0.6871,
+              "content_preview": " Unapproved AI tools \n10. Data Protection \nCompany data must be classified and protected appropriately. \nExamples of sensitive information include: \n Customer records \n Employee records \n Financial information \n Credentials \n API keys \n Source code \n Product designs \n Internal reports \nSens"
+            }
+          ]
+        },
+        {
+          "id": "out_of_scope_001",
+          "category": "Out-of-scope",
+          "question": "What is the current stock price of the company?",
+          "expected_sources": [],
+          "retrieved_sources": [],
+          "expected_source_found": true,
+          "results": []
+        }
+      ]
+    },
+    "3": {
+      "in_scope_success": 4,
+      "in_scope_total": 4,
+      "in_scope_success_rate": 1.0,
+      "out_of_scope_no_evidence": 1,
+      "out_of_scope_total": 1,
+      "out_of_scope_no_evidence_rate": 1.0,
+      "cases": [
+        {
+          "id": "hr_001",
+          "category": "HR",
+          "question": "What does the company say about professional conduct?",
+          "expected_sources": [
+            "hr_policy.pdf"
+          ],
+          "retrieved_sources": [
+            "hr_policy.pdf",
+            "company_policy.pdf",
+            "hr_policy.pdf"
+          ],
+          "expected_source_found": true,
+          "results": [
+            {
+              "rank": 1,
+              "source": "hr_policy.pdf",
+              "distance": 1.0407,
+              "content_preview": "11. Workplace Conduct \nEmployees must: \n Treat colleagues respectfully. \n Communicate professionally. \n Follow company procedures. \n Protect company property. \n Maintain confidentiality. \n Avoid conflicts of interest. \n Follow applicable laws and regulations. \nHarassment, discrimination, bull"
+            },
+            {
+              "rank": 2,
+              "source": "company_policy.pdf",
+              "distance": 1.076,
+              "content_preview": "Every employee is responsible for: \n Understanding applicable policies. \n Following company procedures. \n Protecting company information. \n Reporting suspected violations. \n Maintaining professional behavior. \n Completing required training. \n21. Reporting Violations"
+            },
+            {
+              "rank": 3,
+              "source": "hr_policy.pdf",
+              "distance": 1.0789,
+              "content_preview": "12. Anti-Harassment \nThe company is committed to maintaining a professional and respectful workplace. \nEmployees can report inappropriate behavior to HR or an appropriate designated authority. \nReports will be handled confidentially to the extent reasonably possible and investigated \naccording to co"
+            }
+          ]
+        },
+        {
+          "id": "hr_002",
+          "category": "HR",
+          "question": "What should employees do about workplace harassment?",
+          "expected_sources": [
+            "hr_policy.pdf"
+          ],
+          "retrieved_sources": [
+            "hr_policy.pdf",
+            "hr_policy.pdf",
+            "company_policy.pdf"
+          ],
+          "expected_source_found": true,
+          "results": [
+            {
+              "rank": 1,
+              "source": "hr_policy.pdf",
+              "distance": 0.6519,
+              "content_preview": "11. Workplace Conduct \nEmployees must: \n Treat colleagues respectfully. \n Communicate professionally. \n Follow company procedures. \n Protect company property. \n Maintain confidentiality. \n Avoid conflicts of interest. \n Follow applicable laws and regulations. \nHarassment, discrimination, bull"
+            },
+            {
+              "rank": 2,
+              "source": "hr_policy.pdf",
+              "distance": 0.884,
+              "content_preview": "12. Anti-Harassment \nThe company is committed to maintaining a professional and respectful workplace. \nEmployees can report inappropriate behavior to HR or an appropriate designated authority. \nReports will be handled confidentially to the extent reasonably possible and investigated \naccording to co"
+            },
+            {
+              "rank": 3,
+              "source": "company_policy.pdf",
+              "distance": 0.9411,
+              "content_preview": "Employees who become aware of serious violations should report them through appropriate \nchannels such as: \n Reporting Manager \n HR Department \n IT/Security Department \n Senior Management \nReports should be made honestly and in good faith. \n22. Non-Retaliation \nThe company does not tolerate reta"
+            }
+          ]
+        },
+        {
+          "id": "company_001",
+          "category": "Company",
+          "question": "What should employees do if they identify a policy violation?",
+          "expected_sources": [
+            "company_policy.pdf"
+          ],
+          "retrieved_sources": [
+            "company_policy.pdf",
+            "company_policy.pdf",
+            "company_policy.pdf"
+          ],
+          "expected_source_found": true,
+          "results": [
+            {
+              "rank": 1,
+              "source": "company_policy.pdf",
+              "distance": 0.7044,
+              "content_preview": "Employees who become aware of serious violations should report them through appropriate \nchannels such as: \n Reporting Manager \n HR Department \n IT/Security Department \n Senior Management \nReports should be made honestly and in good faith. \n22. Non-Retaliation \nThe company does not tolerate reta"
+            },
+            {
+              "rank": 2,
+              "source": "company_policy.pdf",
+              "distance": 0.7471,
+              "content_preview": " Legal action \n24. Policy Exceptions \nExceptions to company policies require appropriate management approval. \nEmployees should not assume that an exception exists simply because a policy requirement is \ninconvenient. \n25. Policy Review \nSenior Management shall periodically review this Corporate Po"
+            },
+            {
+              "rank": 3,
+              "source": "company_policy.pdf",
+              "distance": 0.8441,
+              "content_preview": "Every employee is responsible for: \n Understanding applicable policies. \n Following company procedures. \n Protecting company information. \n Reporting suspected violations. \n Maintaining professional behavior. \n Completing required training. \n21. Reporting Violations"
+            }
+          ]
+        },
+        {
+          "id": "it_001",
+          "category": "IT",
+          "question": "How should company information be protected?",
+          "expected_sources": [
+            "it_policy.pdf"
+          ],
+          "retrieved_sources": [
+            "company_policy.pdf",
+            "it_policy.pdf",
+            "company_policy.pdf"
+          ],
+          "expected_source_found": true,
+          "results": [
+            {
+              "rank": 1,
+              "source": "company_policy.pdf",
+              "distance": 0.4712,
+              "content_preview": " Provide accurate information. \n Protect customer information. \n Communicate clearly. \n Meet agreed responsibilities. \n Escalate customer issues appropriately. \n Avoid making unauthorized commitments. \nCustomer complaints should be handled promptly and professionally. \n9. Confidential Informat"
+            },
+            {
+              "rank": 2,
+              "source": "it_policy.pdf",
+              "distance": 0.6871,
+              "content_preview": " Unapproved AI tools \n10. Data Protection \nCompany data must be classified and protected appropriately. \nExamples of sensitive information include: \n Customer records \n Employee records \n Financial information \n Credentials \n API keys \n Source code \n Product designs \n Internal reports \nSens"
+            },
+            {
+              "rank": 3,
+              "source": "company_policy.pdf",
+              "distance": 0.7065,
+              "content_preview": "need. \n10. Intellectual Property \nCompany intellectual property must be protected. \nThis may include: \n Software \n Source code \n Designs \n Documentation \n Logos \n Product concepts \n Business processes \n Databases \n Research \nEmployees must not use or disclose company intellectual property w"
+            }
+          ]
+        },
+        {
+          "id": "out_of_scope_001",
+          "category": "Out-of-scope",
+          "question": "What is the current stock price of the company?",
+          "expected_sources": [],
+          "retrieved_sources": [],
+          "expected_source_found": true,
+          "results": []
+        }
+      ]
+    }
+  },
+  "configuration": {
+    "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+    "chunk_size": 800,
+    "chunk_overlap": 150,
+    "max_distance": 1.1
+  },
+  "limitations": [
+    "The evaluation dataset currently contains only five cases.",
+    "This benchmark evaluates source retrieval, not answer correctness.",
+    "Expected-source matching is based on source metadata.",
+    "Retrieval distance is specific to the embedding model and vector store."
+  ]
+}

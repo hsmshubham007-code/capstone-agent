@@ -1,121 +1,230 @@
 import json
+import statistics
 from pathlib import Path
-
-from cost_model import (
-    calculate_cost,
-    calculate_routing_savings,
-    project_monthly_cost,
-)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
-OUTPUT_PATH = (
+EVALUATION_RESULTS = (
+    PROJECT_ROOT
+    / "evals"
+    / "evaluation_results.json"
+)
+
+INJECTION_RESULTS = (
+    PROJECT_ROOT
+    / "evals"
+    / "injection_results.json"
+)
+
+ROUTING_RESULTS = (
+    PROJECT_ROOT
+    / "evals"
+    / "routing_evaluation_results.json"
+)
+
+COST_PROJECTION = (
     PROJECT_ROOT
     / "evals"
     / "cost_projection.json"
 )
 
-
-# Representative workload assumptions.
-BASE_MONTHLY_QUERIES = 10_000
-VOLUME_MULTIPLIER = 10
-
-PROMPT_TOKENS = 1_000
-COMPLETION_TOKENS = 300
-
-LARGE_MODEL_FRACTION = 0.10
+REPORT_PATH = (
+    PROJECT_ROOT
+    / "evals"
+    / "evaluation_report.json"
+)
 
 
-def main():
-    small_model = "openai/gpt-oss-20b"
-    large_model = "openai/gpt-oss-120b"
+def load_json(path):
+    with open(
+        path,
+        "r",
+        encoding="utf-8",
+    ) as file:
+        return json.load(file)
 
-    small_cost = calculate_cost(
-        small_model,
-        PROMPT_TOKENS,
-        COMPLETION_TOKENS,
+
+def percentile(values, percentile_value):
+    if not values:
+        return 0.0
+
+    values = sorted(values)
+
+    index = (
+        len(values) - 1
+    ) * percentile_value
+
+    lower = int(index)
+
+    upper = min(
+        lower + 1,
+        len(values) - 1,
     )
 
-    large_cost = calculate_cost(
-        large_model,
-        PROMPT_TOKENS,
-        COMPLETION_TOKENS,
+    weight = index - lower
+
+    return values[lower] + (
+        values[upper] - values[lower]
+    ) * weight
+
+
+def build_latency_report(evaluation):
+    evaluation_results = evaluation.get(
+        "results",
+        [],
     )
 
-    routing = calculate_routing_savings(
-        small_model_cost_per_query=small_cost,
-        large_model_cost_per_query=large_cost,
-        large_model_fraction=LARGE_MODEL_FRACTION,
+    latencies = [
+        item["latency_ms"]
+        for item in evaluation_results
+        if item.get("status") != "ERROR"
+        and "latency_ms" in item
+    ]
+
+    if not latencies:
+        return {}
+
+    return {
+        "count": len(latencies),
+        "mean_ms": round(
+            statistics.mean(latencies),
+            2,
+        ),
+        "p50_ms": round(
+            percentile(
+                latencies,
+                0.50,
+            ),
+            2,
+        ),
+        "p95_ms": round(
+            percentile(
+                latencies,
+                0.95,
+            ),
+            2,
+        ),
+        "min_ms": round(
+            min(latencies),
+            2,
+        ),
+        "max_ms": round(
+            max(latencies),
+            2,
+        ),
+    }
+
+
+def build_report():
+    evaluation = load_json(
+        EVALUATION_RESULTS
     )
 
-    base_volume = BASE_MONTHLY_QUERIES
-    projected_volume = (
-        base_volume * VOLUME_MULTIPLIER
-    )
-
-    always_small_base = project_monthly_cost(
-        small_cost,
-        base_volume,
-    )
-
-    always_large_base = project_monthly_cost(
-        large_cost,
-        base_volume,
-    )
-
-    routed_base = project_monthly_cost(
-        routing["routed_cost_per_query"],
-        base_volume,
-    )
-
-    always_small_10x = project_monthly_cost(
-        small_cost,
-        projected_volume,
-    )
-
-    always_large_10x = project_monthly_cost(
-        large_cost,
-        projected_volume,
-    )
-
-    routed_10x = project_monthly_cost(
-        routing["routed_cost_per_query"],
-        projected_volume,
+    injection = load_json(
+        INJECTION_RESULTS
     )
 
     report = {
-        "assumptions": {
-            "base_monthly_queries": base_volume,
-            "volume_multiplier": VOLUME_MULTIPLIER,
-            "projected_monthly_queries": projected_volume,
-            "prompt_tokens_per_query": PROMPT_TOKENS,
-            "completion_tokens_per_query": COMPLETION_TOKENS,
-            "large_model_fraction": LARGE_MODEL_FRACTION,
+        "evaluation": {
+            "summary": evaluation.get(
+                "summary",
+                {},
+            ),
+            "categories": evaluation.get(
+                "category_stats",
+                {},
+            ),
+            "retrieval": evaluation.get(
+                "retrieval",
+                {},
+            ),
+            "cost": evaluation.get(
+                "cost",
+                {},
+            ),
         },
-        "per_query": {
-            "20b_usd": small_cost,
-            "120b_usd": large_cost,
-            "routed_usd": routing[
-                "routed_cost_per_query"
-            ],
-            "routing_savings_percentage": routing[
-                "savings_percentage"
-            ],
+        "injection_resistance": injection.get(
+            "summary",
+            {},
+        ),
+        "routing": {
+            "available": ROUTING_RESULTS.exists(),
         },
-        "monthly_base": {
-            "always_20b_usd": always_small_base,
-            "always_120b_usd": always_large_base,
-            "routed_usd": routed_base,
-        },
-        "monthly_10x": {
-            "always_20b_usd": always_small_10x,
-            "always_120b_usd": always_large_10x,
-            "routed_usd": routed_10x,
-        },
+        "limitations": [
+            "The quality evaluation currently contains only five cases.",
+            "Keyword matching is not equivalent to semantic answer evaluation.",
+            "Prompt-injection evaluation contains only a small attack set.",
+            "Infrastructure errors must be distinguished from model-quality failures.",
+            "Cold-start latency is based on the first successful evaluation case and is not a controlled process-restart benchmark.",
+            "Latency is affected by cold starts, model service latency, retrieval, and network conditions.",
+            "Cost projections are modeled estimates based on assumed token usage and routing distribution rather than observed production traffic.",
+            "Retrieval distance is embedding-model-specific and should not be interpreted as a universal relevance threshold.",
+        ],
     }
 
+    latency_report = build_latency_report(
+        evaluation
+    )
+
+    if latency_report:
+        report["evaluation"]["latency"] = (
+            latency_report
+        )
+
+    # Preserve the measured cold/warm diagnostics
+    # from evaluation_results.json.
+    summary = evaluation.get(
+        "summary",
+        {},
+    )
+
+    report["evaluation"]["latency_diagnostics"] = {
+        "cold_start_latency_ms": summary.get(
+            "cold_start_latency_ms",
+            0.0,
+        ),
+        "warm_average_latency_ms": summary.get(
+            "warm_average_latency_ms",
+            0.0,
+        ),
+        "warm_p50_latency_ms": summary.get(
+            "warm_p50_latency_ms",
+            0.0,
+        ),
+        "warm_p95_latency_ms": summary.get(
+            "warm_p95_latency_ms",
+            0.0,
+        ),
+    }
+
+    # Include the modeled cost projection separately
+    # from measured evaluation cost.
+    if COST_PROJECTION.exists():
+        cost_projection = load_json(
+            COST_PROJECTION
+        )
+
+        report["cost_projection"] = {
+            "assumptions": cost_projection.get(
+                "assumptions",
+                {},
+            ),
+            "per_query": cost_projection.get(
+                "per_query",
+                {},
+            ),
+            "monthly_base": cost_projection.get(
+                "monthly_base",
+                {},
+            ),
+            "monthly_10x": cost_projection.get(
+                "monthly_10x",
+                {},
+            ),
+        }
+
     with open(
-        OUTPUT_PATH,
+        REPORT_PATH,
         "w",
         encoding="utf-8",
     ) as file:
@@ -123,81 +232,15 @@ def main():
             report,
             file,
             indent=4,
+            ensure_ascii=False,
         )
 
-    print("=" * 60)
-    print("COST PROJECTION")
-    print("=" * 60)
-
     print(
-        f"Base monthly volume: "
-        f"{base_volume:,}"
+        f"Report saved to: {REPORT_PATH}"
     )
 
-    print(
-        f"10x monthly volume: "
-        f"{projected_volume:,}"
-    )
-
-    print()
-
-    print(
-        f"20B cost/query: "
-        f"${small_cost:.8f}"
-    )
-
-    print(
-        f"120B cost/query: "
-        f"${large_cost:.8f}"
-    )
-
-    print(
-        f"Routed cost/query: "
-        f"${routing['routed_cost_per_query']:.8f}"
-    )
-
-    print(
-        f"Routing savings vs always-120B: "
-        f"{routing['savings_percentage'] * 100:.2f}%"
-    )
-
-    print()
-
-    print("Base monthly cost:")
-    print(
-        f"  Always 20B: "
-        f"${always_small_base:.2f}"
-    )
-    print(
-        f"  Always 120B: "
-        f"${always_large_base:.2f}"
-    )
-    print(
-        f"  Routed: "
-        f"${routed_base:.2f}"
-    )
-
-    print()
-
-    print("Projected 10x monthly cost:")
-    print(
-        f"  Always 20B: "
-        f"${always_small_10x:.2f}"
-    )
-    print(
-        f"  Always 120B: "
-        f"${always_large_10x:.2f}"
-    )
-    print(
-        f"  Routed: "
-        f"${routed_10x:.2f}"
-    )
-
-    print()
-    print(
-        f"Saved to: {OUTPUT_PATH}"
-    )
+    return report
 
 
 if __name__ == "__main__":
-    main()
+    build_report()

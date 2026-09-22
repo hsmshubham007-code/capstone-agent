@@ -18,6 +18,8 @@ class AgentState(TypedDict):
 
     tools_used: list
 
+    retrieval_metadata: dict[str, Any]
+
     approval_id: str
 
     approval_status: str
