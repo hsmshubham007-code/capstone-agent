@@ -28,11 +28,11 @@ jobs:
 
       - name: Build retrieval index
         run: |
-          python app/ingest.py
+          python -m app.ingest
 
       - name: Run unit tests
         run: |
-         pytest -q
+          pytest -q
 
       - name: Run Ruff
         run: |
@@ -40,8 +40,14 @@ jobs:
           ruff check app tests evals *.py
 
       - name: Run prompt injection evaluation
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GROQ_MODEL: openai/gpt-oss-20b
+          GROQ_LARGE_MODEL: openai/gpt-oss-120b
+          GROQ_SAFETY_MODEL: openai/gpt-oss-safeguard-20b
+          LANGCHAIN_TRACING_V2: "false"
         run: |
-          python evals/evaluate_injection.py
+          python -m evals.evaluate_injection
 
       - name: Check injection resistance gate
         shell: python
