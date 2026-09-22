@@ -3,10 +3,10 @@ import statistics
 import time
 from pathlib import Path
 
-from app.agent import run_agent
-
 DATASET_PATH = Path("evals/query_routing_dataset.json")
 RESULTS_PATH = Path("evals/routing_evaluation_results.json")
+
+from app.agent import run_agent
 
 
 def load_dataset():
