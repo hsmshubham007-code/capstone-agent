@@ -9,7 +9,7 @@ services:
       - .env
 
     volumes:
-      - chroma_data:/app/storage/chroma
+      - ./storage/chroma:/app/storage/chroma
       - checkpoint_data:/app/storage/checkpoints
 
     restart: unless-stopped
@@ -28,5 +28,4 @@ services:
       start_period: 30s
 
 volumes:
-  chroma_data:
   checkpoint_data:

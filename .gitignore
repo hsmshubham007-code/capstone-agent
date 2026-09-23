@@ -16,3 +16,4 @@ storage/
 /evaluation_results.json
 
 audit_logs/
+audit.json

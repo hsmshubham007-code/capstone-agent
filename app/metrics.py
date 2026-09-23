@@ -246,8 +246,8 @@ class Metrics:
 
                 "cost": {
                     "total_usd": round(
-                        self.cost["total_usd"],
-                        6,
+                       self.cost["total_usd"],
+                       6,
                     ),
                     "requests_with_cost": self.cost[
                         "requests_with_cost"

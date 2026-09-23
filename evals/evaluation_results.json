@@ -7,13 +7,13 @@
     "completion_rate": 1.0,
     "pass_rate": 1.0,
     "error_rate": 0.0,
-    "average_latency_ms": 4665.92,
-    "p50_latency_ms": 892.52,
-    "p95_latency_ms": 16808.17,
-    "cold_start_latency_ms": 20746.57,
-    "warm_average_latency_ms": 645.75,
-    "warm_p50_latency_ms": 755.21,
-    "warm_p95_latency_ms": 1030.23
+    "average_latency_ms": 4949.13,
+    "p50_latency_ms": 852.33,
+    "p95_latency_ms": 17533.01,
+    "cold_start_latency_ms": 21539.0,
+    "warm_average_latency_ms": 801.66,
+    "warm_p50_latency_ms": 838.48,
+    "warm_p95_latency_ms": 1410.55
   },
   "retrieval": {
     "source_hit_rate": 1.0,
@@ -28,14 +28,14 @@
   },
   "cost": {
     "average_prompt_tokens": 470.75,
-    "average_completion_tokens": 334.75,
-    "average_reasoning_tokens": 197.75,
-    "average_total_tokens": 805.5,
-    "average_cost_per_query_usd": 0.00013573,
-    "total_evaluation_cost_usd": 0.00054291,
-    "projected_cost_1k_usd": 0.1357,
-    "projected_cost_10k_usd": 1.3573,
-    "projected_cost_100k_usd": 13.5727
+    "average_completion_tokens": 360.25,
+    "average_reasoning_tokens": 229.25,
+    "average_total_tokens": 831,
+    "average_cost_per_query_usd": 0.00014338,
+    "total_evaluation_cost_usd": 0.00057351,
+    "projected_cost_1k_usd": 0.1434,
+    "projected_cost_10k_usd": 1.4338,
+    "projected_cost_100k_usd": 14.3377
   },
   "category_stats": {
     "HR": {
@@ -67,7 +67,7 @@
       "passed": true,
       "keyword_pass": true,
       "source_pass": true,
-      "answer": "The company states that professional conduct requires employees to:\n\n- Treat colleagues with respect.  \n- Communicate in a professional manner.  \n- Follow all company procedures.  \n- Protect company property.  \n- Maintain confidentiality of customer, employee, source‑code, business‑plan, financial, product, credential, and internal‑documentation information.  \n- Avoid conflicts of interest.  \n- Comply with all applicable laws and regulations.  \n\nHarassment, discrimination, bullying, threats, violence, or any other inappropriate workplace behavior is not tolerated.  \n\nAll employees are also responsible for understanding these policies, reporting suspected violations, maintaining professional behavior, and completing required training.",
+      "answer": "The company states that professional conduct requires employees to:\n\n- Treat colleagues respectfully.  \n- Communicate in a professional manner.  \n- Follow all company procedures.  \n- Protect company property.  \n- Maintain confidentiality of customer, employee, source‑code, business‑plan, financial, product, credential, and internal‑documentation information.  \n- Avoid conflicts of interest.  \n- Comply with all applicable laws and regulations.  \n\nHarassment, discrimination, bullying, threats, violence, or any other inappropriate workplace behavior is not tolerated.  \n\nEvery employee is also responsible for maintaining professional behavior, understanding and following policies, protecting company information, reporting suspected violations, and completing required training.",
       "sources": [
         "hr_policy.pdf",
         "company_policy.pdf"
@@ -78,7 +78,7 @@
       "tools_used": [
         "search_documents"
       ],
-      "latency_ms": 20746.57,
+      "latency_ms": 21539.0,
       "retrieval_metadata": {
         "documents_retrieved": 3,
         "context_chars": 1408,
@@ -91,18 +91,18 @@
           1.076,
           1.0789
         ],
-        "latency_ms": 18750.75
+        "latency_ms": 19224.88
       },
       "llm_metadata": {
         "model": "openai/gpt-oss-20b",
-        "latency_ms": 1967.55,
+        "latency_ms": 2272.66,
         "prompt_tokens": 433,
-        "completion_tokens": 397,
-        "reasoning_tokens": 257,
-        "total_tokens": 830,
-        "cost_usd": 0.00015157
+        "completion_tokens": 395,
+        "reasoning_tokens": 251,
+        "total_tokens": 828,
+        "cost_usd": 0.00015097
       },
-      "cost_usd": 0.00015157
+      "cost_usd": 0.00015097
     },
     {
       "id": "hr_002",
@@ -122,7 +122,7 @@
       "tools_used": [
         "search_documents"
       ],
-      "latency_ms": 617.91,
+      "latency_ms": 824.64,
       "retrieval_metadata": {
         "documents_retrieved": 3,
         "context_chars": 1886,
@@ -135,18 +135,18 @@
           0.884,
           0.9411
         ],
-        "latency_ms": 12.7
+        "latency_ms": 16.3
       },
       "llm_metadata": {
         "model": "openai/gpt-oss-20b",
-        "latency_ms": 585.99,
+        "latency_ms": 790.35,
         "prompt_tokens": 526,
-        "completion_tokens": 199,
-        "reasoning_tokens": 133,
-        "total_tokens": 725,
-        "cost_usd": 9.915e-05
+        "completion_tokens": 221,
+        "reasoning_tokens": 155,
+        "total_tokens": 747,
+        "cost_usd": 0.00010575
       },
-      "cost_usd": 9.915e-05
+      "cost_usd": 0.00010575
     },
     {
       "id": "company_001",
@@ -165,7 +165,7 @@
       "tools_used": [
         "search_documents"
       ],
-      "latency_ms": 892.52,
+      "latency_ms": 852.33,
       "retrieval_metadata": {
         "documents_retrieved": 3,
         "context_chars": 1488,
@@ -177,11 +177,11 @@
           0.7471,
           0.8441
         ],
-        "latency_ms": 15.23
+        "latency_ms": 16.38
       },
       "llm_metadata": {
         "model": "openai/gpt-oss-20b",
-        "latency_ms": 857.28,
+        "latency_ms": 821.7,
         "prompt_tokens": 463,
         "completion_tokens": 285,
         "reasoning_tokens": 216,
@@ -197,7 +197,7 @@
       "passed": true,
       "keyword_pass": true,
       "source_pass": true,
-      "answer": "Company information should be protected by:\n\n1. **Keeping all confidential company and customer information secure** – this includes customer data, business strategies, financial information, contracts, software, source code, product roadmaps, internal communications, and employee information.  \n2. **Sharing information only with authorized individuals who have a legitimate business need** – no confidential data should be disclosed to anyone outside that group.  \n3. **Safeguarding company intellectual property** – software, source code, designs, documentation, logos, product concepts, business processes, databases, and research must not be used or disclosed without proper authorization.  \n4. **Classifying and protecting company data appropriately** – sensitive data such as customer records, employee records, financial information, credentials, API keys, source code, product designs, and internal reports must be handled with the correct level of security.  \n5. **Preventing unauthorized copying or transfer** – sensitive data must not be copied to unauthorized personal devices or services.  \n6. **Handling customer complaints promptly and professionally** – while addressing complaints, ensure that any customer information remains protected and is only shared with those who are authorized to handle the issue.  \n\nBy following these practices, the company ensures that all sensitive and intellectual property information remains secure and is only accessed by those with a legitimate business need.",
+      "answer": "Company information must be protected by:\n\n1. **Classifying and safeguarding data** – Treat all company data (customer records, employee records, financial information, credentials, API keys, source code, product designs, internal reports, etc.) as sensitive and apply appropriate protection measures.\n\n2. **Restricting access** – Share confidential company and customer information only with authorized individuals who have a legitimate business need. Do not disclose or use company intellectual property (software, source code, designs, documentation, logos, product concepts, business processes, databases, research, etc.) without proper authorization.\n\n3. **Preventing unauthorized copying** – Do not copy sensitive data to personal devices or unapproved services. Keep all confidential and intellectual property information within secure, company‑controlled environments.\n\n4. **Protecting customer information** – Ensure customer data is handled accurately, securely, and in compliance with privacy requirements, and that any customer complaints are addressed promptly and professionally.\n\n5. **Avoiding unauthorized commitments** – Do not make commitments or share information that could compromise company confidentiality or intellectual property.\n\nBy following these principles, the company ensures that all confidential, sensitive, and intellectual property information remains protected.",
       "sources": [
         "company_policy.pdf",
         "it_policy.pdf"
@@ -208,7 +208,7 @@
       "tools_used": [
         "search_documents"
       ],
-      "latency_ms": 1054.53,
+      "latency_ms": 1509.06,
       "retrieval_metadata": {
         "documents_retrieved": 3,
         "context_chars": 1491,
@@ -221,18 +221,18 @@
           0.6871,
           0.7065
         ],
-        "latency_ms": 13.62
+        "latency_ms": 16.7
       },
       "llm_metadata": {
         "model": "openai/gpt-oss-20b",
-        "latency_ms": 1017.77,
+        "latency_ms": 1477.06,
         "prompt_tokens": 461,
-        "completion_tokens": 458,
-        "reasoning_tokens": 185,
-        "total_tokens": 919,
-        "cost_usd": 0.00017197
+        "completion_tokens": 540,
+        "reasoning_tokens": 295,
+        "total_tokens": 1001,
+        "cost_usd": 0.00019657
       },
-      "cost_usd": 0.00017197
+      "cost_usd": 0.00019657
     },
     {
       "id": "out_of_scope_001",
@@ -245,7 +245,7 @@
       "sources": [],
       "expected_sources": [],
       "tools_used": [],
-      "latency_ms": 18.05,
+      "latency_ms": 20.62,
       "retrieval_metadata": {},
       "llm_metadata": {},
       "cost_usd": 0.0
