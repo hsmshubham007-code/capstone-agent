@@ -206,8 +206,8 @@ The current performance risk is primarily **LLM/provider latency**, rather than 
 | T32 | Document architecture | Should | 2 hrs | Done | README / architecture documentation |
 | T33 | Document results and limitations | Should | 2 hrs | Done | Results documentation |
 | T34 | Verify end-to-end production flow | Must | 1 hr | In Progress | Real-data run with guardrails and audit logging |
-| T35 | Build one-command evaluation suite | Must | 2 hrs | Not Started | CI-ready evaluation command |
-| T36 | Add evaluation pass-rate CI gate | Must | 2 hrs | Not Started | Build fails on evaluation regression |
+| T35 | Build one-command evaluation suite | Must | 2 hrs | Done | Routing, retrieval, and prompt-injection evaluations run through one command with a 90% CI-ready gate |
+| T36 | Add evaluation pass-rate CI gate | Must | 2 hrs | Done | Build fails on evaluation regression |
 | T37 | Raise and review production PR | Must | 1 hr | Not Started | Reviewed PR with comments resolved |
 | T38 | Record final evaluation results | Should | 1 hr | Not Started | Baseline and regression results |
 | T39 | Investigate LLM/provider tail latency | Should | 2 hrs | In Progress | Repeated latency measurements |
