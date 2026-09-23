@@ -1,28 +1,16 @@
-import uuid
-from datetime import datetime, timezone
-
 from app.audit import record_approval_event
 
 approval_queue = {}
-
-
-def _utc_now():
-    """Return the current UTC timestamp."""
-    return datetime.now(timezone.utc).isoformat()
 
 
 def create_approval_request(
     request_id: str,
     tool_name: str,
     arguments: dict,
-):
-    """
-    Create a new approval request for a risky tool.
-    """
+) -> dict:
+    """Create a pending approval request."""
 
-    approval_id = str(uuid.uuid4())
-
-    now = _utc_now()
+    approval_id = f"approval-{len(approval_queue) + 1}"
 
     approval = {
         "approval_id": approval_id,
@@ -30,8 +18,7 @@ def create_approval_request(
         "tool_name": tool_name,
         "arguments": arguments,
         "status": "PENDING",
-        "created_at": now,
-        "updated_at": now,
+        "result": None,
     }
 
     approval_queue[approval_id] = approval
@@ -42,6 +29,7 @@ def create_approval_request(
         tool_name=tool_name,
         status="PENDING",
         details={
+            "action": "APPROVAL_CREATED",
             "arguments": arguments,
         },
     )
@@ -51,19 +39,14 @@ def create_approval_request(
 
 def get_approval_request(
     approval_id: str,
-):
-    """
-    Get one approval request by ID.
-    """
+) -> dict | None:
+    """Return an approval request by ID."""
 
     return approval_queue.get(approval_id)
 
 
-def get_pending_approvals():
-    """
-    Return all approval requests waiting
-    for human approval.
-    """
+def get_pending_approvals() -> list[dict]:
+    """Return all pending approval requests."""
 
     return [
         approval
@@ -74,34 +57,23 @@ def get_pending_approvals():
 
 def approve_request(
     approval_id: str,
-):
-    """
-    Approve a pending request.
+) -> dict:
+    """Approve a pending request."""
 
-    Important:
-    Approval does NOT execute the tool.
-    Execution happens separately through
-    execute_approved_request().
-    """
+    approval = get_approval_request(approval_id)
 
-    approval = approval_queue.get(
-        approval_id
-    )
-
-    if not approval:
+    if approval is None:
         raise ValueError(
-            f"Approval request not found: "
-            f"{approval_id}"
+            f"Approval request not found: {approval_id}"
         )
 
     if approval["status"] != "PENDING":
         raise ValueError(
-            f"Approval request is already "
-            f"{approval['status']}"
+            "Only PENDING approval requests can be approved. "
+            f"Current status: {approval['status']}"
         )
 
     approval["status"] = "APPROVED"
-    approval["updated_at"] = _utc_now()
 
     record_approval_event(
         request_id=approval["request_id"],
@@ -109,7 +81,7 @@ def approve_request(
         tool_name=approval["tool_name"],
         status="APPROVED",
         details={
-            "arguments": approval["arguments"],
+            "action": "APPROVAL_APPROVED",
         },
     )
 
@@ -118,31 +90,23 @@ def approve_request(
 
 def reject_request(
     approval_id: str,
-):
-    """
-    Reject a pending request.
+) -> dict:
+    """Reject a pending request."""
 
-    Rejected requests can NEVER be executed.
-    """
+    approval = get_approval_request(approval_id)
 
-    approval = approval_queue.get(
-        approval_id
-    )
-
-    if not approval:
+    if approval is None:
         raise ValueError(
-            f"Approval request not found: "
-            f"{approval_id}"
+            f"Approval request not found: {approval_id}"
         )
 
     if approval["status"] != "PENDING":
         raise ValueError(
-            f"Approval request is already "
-            f"{approval['status']}"
+            "Only PENDING approval requests can be rejected. "
+            f"Current status: {approval['status']}"
         )
 
     approval["status"] = "REJECTED"
-    approval["updated_at"] = _utc_now()
 
     record_approval_event(
         request_id=approval["request_id"],
@@ -150,7 +114,7 @@ def reject_request(
         tool_name=approval["tool_name"],
         status="REJECTED",
         details={
-            "arguments": approval["arguments"],
+            "action": "APPROVAL_REJECTED",
         },
     )
 
@@ -159,32 +123,19 @@ def reject_request(
 
 def execute_approved_request(
     approval_id: str,
-):
-    """
-    Execute a risky tool ONLY after approval.
+) -> dict:
+    """Execute an approved risky tool."""
 
-    Safety rules:
+    approval = get_approval_request(approval_id)
 
-    1. Approval request must exist.
-    2. Status must be APPROVED.
-    3. Tool must be explicitly supported.
-    4. Stored arguments are used.
-    5. Rejected/PENDING requests cannot execute.
-    """
-
-    approval = approval_queue.get(
-        approval_id
-    )
-
-    if not approval:
+    if approval is None:
         raise ValueError(
-            f"Approval request not found: "
-            f"{approval_id}"
+            f"Approval request not found: {approval_id}"
         )
 
     if approval["status"] != "APPROVED":
         raise ValueError(
-            "Request cannot be executed. "
+            "Approval request must be APPROVED before execution. "
             f"Current status: {approval['status']}"
         )
 
@@ -192,12 +143,10 @@ def execute_approved_request(
     arguments = approval["arguments"]
 
     # -------------------------------------------------
-    # Explicit tool allow-list
+    # Update employee record
     # -------------------------------------------------
 
     if tool_name == "update_employee_record":
-
-        # Lazy import avoids circular imports.
         from app.risky_tools import update_employee_record
 
         result = update_employee_record(
@@ -207,19 +156,29 @@ def execute_approved_request(
             new_value=arguments["new_value"],
         )
 
-    else:
+    # -------------------------------------------------
+    # Delete employee record
+    # -------------------------------------------------
 
-        raise ValueError(
-            f"Unsupported approved tool: "
-            f"{tool_name}"
+    elif tool_name == "delete_employee_record":
+        from app.risky_tools import delete_employee_record
+
+        result = delete_employee_record(
+            request_id=approval["request_id"],
+            employee_id=arguments["employee_id"],
         )
 
     # -------------------------------------------------
-    # Mark approval as executed
+    # Unsupported risky tool
     # -------------------------------------------------
 
+    else:
+        raise ValueError(
+            f"Unsupported approved tool: {tool_name}"
+        )
+
     approval["status"] = "EXECUTED"
-    approval["updated_at"] = _utc_now()
+    approval["result"] = result
 
     record_approval_event(
         request_id=approval["request_id"],
@@ -227,7 +186,7 @@ def execute_approved_request(
         tool_name=tool_name,
         status="EXECUTED",
         details={
-            "arguments": arguments,
+            "action": "APPROVAL_EXECUTED",
             "result": result,
         },
     )

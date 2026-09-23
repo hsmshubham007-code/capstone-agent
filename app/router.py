@@ -9,6 +9,7 @@ def decide_tool(
 
     - search_documents
     - update_employee_record
+    - delete_employee_record
     - no_tool
 
     Risky tools are NOT executed here.
@@ -20,6 +21,25 @@ def decide_tool(
     # -------------------------------------------------
     # 1. Risky employee-record operations
     # -------------------------------------------------
+
+    # Delete must be checked BEFORE update because
+    # "employee record" is also an update keyword.
+    employee_delete_keywords = [
+        "delete employee",
+        "delete the employee",
+        "delete employee record",
+        "delete the employee record",
+        "remove employee",
+        "remove the employee",
+        "remove employee record",
+        "remove the employee record",
+    ]
+
+    if any(
+        keyword in question_lower
+        for keyword in employee_delete_keywords
+    ):
+        return "delete_employee_record"
 
     employee_update_keywords = [
         "update employee",

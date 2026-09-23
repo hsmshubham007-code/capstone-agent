@@ -407,6 +407,31 @@ Answer:
         ]
 
         # -------------------------------------------------
+        # Calculate cost
+        # -------------------------------------------------
+
+        cost_usd = calculate_cost(
+            model=model,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+        )
+
+        # -------------------------------------------------
+        # Visible diagnostic timing
+        # -------------------------------------------------
+
+        print(
+            f"[LLM TIMING] "
+            f"model={model} | "
+            f"total={latency_ms:.2f}ms | "
+            f"prompt={prompt_tokens} | "
+            f"completion={completion_tokens} | "
+            f"reasoning={reasoning_tokens} | "
+            f"total_tokens={total_tokens} | "
+            f"cost=${cost_usd:.8f}"
+        )
+
+        # -------------------------------------------------
         # Metrics
         # -------------------------------------------------
 
@@ -422,12 +447,6 @@ Answer:
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
             total_tokens=total_tokens,
-        )
-
-        cost_usd = calculate_cost(
-            model=model,
-            prompt_tokens=prompt_tokens,
-            completion_tokens=completion_tokens,
         )
 
         metrics.record_cost(
@@ -513,6 +532,12 @@ Answer:
             - start_time
         ) * 1000
 
+        print(
+            f"[LLM TIMING] "
+            f"model={model} | "
+            f"failed_after={latency_ms:.2f}ms"
+        )
+
         metrics.increment(
             "llm_errors_total"
         )
@@ -550,12 +575,6 @@ def generate_answer(
     question,
     context,
 ):
-    """
-    Backward-compatible LLM generation function.
-
-    Existing callers receive only the answer string.
-    """
-
     result = generate_answer_with_metadata(
         question,
         context,

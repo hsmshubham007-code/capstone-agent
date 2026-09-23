@@ -1,3 +1,5 @@
+import time
+
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 
@@ -15,8 +17,17 @@ def get_embeddings():
     global _embeddings
 
     if _embeddings is None:
+        start = time.perf_counter()
+
         _embeddings = HuggingFaceEmbeddings(
             model_name=EMBEDDING_MODEL
+        )
+
+        elapsed = time.perf_counter() - start
+
+        print(
+            f"[EMBEDDING INIT] "
+            f"time={elapsed * 1000:.2f}ms"
         )
 
     return _embeddings
@@ -26,10 +37,19 @@ def get_db():
     global _db
 
     if _db is None:
+        start = time.perf_counter()
+
         _db = Chroma(
             persist_directory=CHROMA_DIR,
             collection_name=COLLECTION_NAME,
             embedding_function=get_embeddings(),
+        )
+
+        elapsed = time.perf_counter() - start
+
+        print(
+            f"[CHROMA INIT] "
+            f"time={elapsed * 1000:.2f}ms"
         )
 
     return _db
@@ -95,19 +115,42 @@ def expand_query(query: str) -> str:
 
 
 def search_documents(query, k=3, max_distance=DEFAULT_MAX_DISTANCE):
+    total_start = time.perf_counter()
+
+    db_start = time.perf_counter()
     db = get_db()
+    db_time = time.perf_counter() - db_start
 
+    expand_start = time.perf_counter()
     expanded_query = expand_query(query)
+    expand_time = time.perf_counter() - expand_start
 
+    search_start = time.perf_counter()
     results = db.similarity_search_with_score(
         expanded_query,
         k=k,
     )
+    search_time = time.perf_counter() - search_start
+
+    filter_start = time.perf_counter()
 
     filtered_results = [
         (doc, score)
         for doc, score in results
         if score <= max_distance
     ]
+
+    filter_time = time.perf_counter() - filter_start
+
+    total_time = time.perf_counter() - total_start
+
+    print(
+        f"[RETRIEVAL TIMING] "
+        f"db={db_time * 1000:.2f}ms | "
+        f"expand={expand_time * 1000:.2f}ms | "
+        f"search={search_time * 1000:.2f}ms | "
+        f"filter={filter_time * 1000:.2f}ms | "
+        f"total={total_time * 1000:.2f}ms"
+    )
 
     return filtered_results
