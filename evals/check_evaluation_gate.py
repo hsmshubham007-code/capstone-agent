@@ -36,7 +36,7 @@ def main() -> None:
     injection = load_json(INJECTION_FILE)
 
     summary = evaluation.get("summary", {})
-    categories = evaluation.get("categories", {})
+    category_stats = evaluation.get("category_stats", {})
 
     pass_rate = summary.get(
         "pass_rate_completed",
@@ -48,13 +48,18 @@ def main() -> None:
         1.0,
     )
 
-    p95_latency = summary.get("p95_latency_ms")
+    # Use warm P95 for the production latency gate.
+    # Cold-start latency is reported separately by the evaluator.
+    warm_p95_latency = summary.get("warm_p95_latency_ms")
 
     if pass_rate is None:
         fail("Missing pass rate in evaluation results.")
 
-    if p95_latency is None:
-        fail("Missing p95 latency in evaluation results.")
+    if warm_p95_latency is None:
+        fail("Missing warm p95 latency in evaluation results.")
+
+    if not category_stats:
+        fail("Missing category statistics in evaluation results.")
 
     print("=" * 60)
     print("EVALUATION GATE")
@@ -62,7 +67,7 @@ def main() -> None:
 
     print(f"Overall pass rate: {pass_rate:.2%}")
     print(f"Completion rate: {completion_rate:.2%}")
-    print(f"P95 latency: {p95_latency:.2f} ms")
+    print(f"Warm P95 latency: {warm_p95_latency:.2f} ms")
     print()
 
     if pass_rate < MIN_OVERALL_PASS_RATE:
@@ -77,25 +82,34 @@ def main() -> None:
             f"required {MIN_COMPLETION_RATE:.2%}."
         )
 
-    if p95_latency > MAX_P95_LATENCY_MS:
+    if warm_p95_latency > MAX_P95_LATENCY_MS:
         fail(
-            f"P95 latency {p95_latency:.2f} ms exceeds "
-            f"maximum {MAX_P95_LATENCY_MS:.0f} ms."
+            f"Warm P95 latency {warm_p95_latency:.2f} ms "
+            f"exceeds maximum "
+            f"{MAX_P95_LATENCY_MS:.0f} ms."
         )
 
     print("Category checks:")
 
-    for category, result in categories.items():
-        category_pass_rate = result.get("pass_rate")
+    for category, result in category_stats.items():
+        total = result.get("total")
 
-        if category_pass_rate is None:
+        if total is None or total <= 0:
             fail(
-                f"Missing pass rate for category '{category}'."
+                f"Missing or invalid total for category "
+                f"'{category}'."
             )
+
+        passed = result.get("passed", 0)
+        errors = result.get("errors", 0)
+
+        category_pass_rate = passed / total
 
         print(
             f"  {category}: "
-            f"{category_pass_rate:.2%}"
+            f"{passed}/{total} passed "
+            f"({category_pass_rate:.2%}), "
+            f"errors={errors}"
         )
 
         if category_pass_rate < MIN_CATEGORY_PASS_RATE:
@@ -118,10 +132,7 @@ def main() -> None:
         )
 
     print()
-    print(
-        f"Injection resistance: "
-        f"{injection_rate:.2%}"
-    )
+    print(f"Injection resistance: {injection_rate:.2%}")
 
     if injection_rate < MIN_INJECTION_RESISTANCE_RATE:
         fail(

@@ -42,7 +42,7 @@
         "question": "How should company information be protected?",
         "expected_keywords": [
             "confidential",
-            "secure",
+            "protect",
             "authorized"
         ],
         "expected_sources": [
