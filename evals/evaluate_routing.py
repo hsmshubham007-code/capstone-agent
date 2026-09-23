@@ -3,6 +3,7 @@ import statistics
 import time
 from pathlib import Path
 
+from app import retrieval
 from app.agent import run_agent
 
 DATASET_PATH = Path("evals/query_routing_dataset.json")
@@ -21,6 +22,17 @@ def evaluate_case(case):
 
     print(f"Evaluating {case['id']}: {question}")
 
+    # --------------------------------------------------
+    # Cold-start detection
+    # --------------------------------------------------
+
+    retrieval_cold_start = (
+        retrieval._embeddings is None
+        or retrieval._db is None
+    )
+
+    retrieval_init_start = time.perf_counter()
+
     start = time.perf_counter()
 
     try:
@@ -34,6 +46,14 @@ def evaluate_case(case):
         error = str(exc)
 
     latency_ms = (time.perf_counter() - start) * 1000
+
+    # Initialization is complete after run_agent returns.
+    # For warm requests this will be approximately zero.
+    retrieval_init_ms = (
+        (time.perf_counter() - retrieval_init_start) * 1000
+        if retrieval_cold_start
+        else 0.0
+    )
 
     actual_tool = result.get("tool")
     actual_sources = set(result.get("sources", []))
@@ -114,6 +134,8 @@ def evaluate_case(case):
         "status": status,
         "passed": status == "PASS",
         "latency_ms": round(latency_ms, 2),
+        "retrieval_cold_start": retrieval_cold_start,
+        "retrieval_init_ms": round(retrieval_init_ms, 2),
         "answer": answer,
         "error": error,
     }
@@ -227,6 +249,75 @@ def print_summary(results):
         print(f"  P50     : {p50:.2f} ms")
         print(f"  P95     : {p95:.2f} ms")
 
+    cold_results = [
+        result
+        for result in results
+        if result.get("retrieval_cold_start")
+        and result["error"] is None
+    ]
+
+    warm_results = [
+        result
+        for result in results
+        if not result.get("retrieval_cold_start")
+        and result["error"] is None
+    ]
+
+    print("\nCold-start vs warm-request latency:")
+
+    if cold_results:
+        cold_latencies = [
+            result["latency_ms"]
+            for result in cold_results
+        ]
+
+        init_times = [
+            result["retrieval_init_ms"]
+            for result in cold_results
+        ]
+
+        print(
+            f"  Cold-start requests : {len(cold_results)}"
+        )
+        print(
+            f"  Cold-start average  : "
+            f"{statistics.mean(cold_latencies):.2f} ms"
+        )
+        print(
+            f"  Retrieval init      : "
+            f"{statistics.mean(init_times):.2f} ms"
+        )
+        print(
+            f"  Cold-start max      : "
+            f"{max(cold_latencies):.2f} ms"
+        )
+    else:
+        print("  Cold-start requests : 0")
+
+    if warm_results:
+        warm_latencies = [
+            result["latency_ms"]
+            for result in warm_results
+        ]
+
+        print(
+            f"  Warm requests       : {len(warm_results)}"
+        )
+        print(
+            f"  Warm average        : "
+            f"{statistics.mean(warm_latencies):.2f} ms"
+        )
+        print(
+            f"  Warm P50            : "
+            f"{statistics.median(warm_latencies):.2f} ms"
+        )
+        print(
+            f"  Warm max            : "
+            f"{max(warm_latencies):.2f} ms"
+        )
+    else:
+        print("  Warm requests       : 0")
+
     print("\nFailed cases:")
 
     failures = [
@@ -338,4 +429,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

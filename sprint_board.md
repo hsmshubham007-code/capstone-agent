@@ -210,8 +210,8 @@ The current performance risk is primarily **LLM/provider latency**, rather than 
 | T36 | Add evaluation pass-rate CI gate | Must | 2 hrs | Done | Build fails on evaluation regression |
 | T37 | Raise and review production PR | Must | 1 hr | Not Started | Reviewed PR with comments resolved |
 | T38 | Record final evaluation results | Should | 1 hr | Not Started | Baseline and regression results |
-| T39 | Investigate LLM/provider tail latency | Should | 2 hrs | In Progress | Repeated latency measurements |
-| T40 | Separate cold-start and warm-request latency | Should | 1 hr | In Progress | Cold/warm performance evidence |
+| T39 | Investigate LLM/provider tail latency | Should | 2 hr | Done
+| T40 | Separate cold-start/warm-request latency | Should | 1 hr | Done
 
 ---
 
