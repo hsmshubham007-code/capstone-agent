@@ -1,147 +1,248 @@
 # Company Policy Agent
 
-A production-oriented AI agent for answering company-policy questions using Retrieval-Augmented Generation (RAG), query routing, relevance filtering, asynchronous tool execution, durable checkpointing, human-in-the-loop approval, audit logging, safety guardrails, monitoring, Docker deployment, and automated AI evaluation gates.
+A production-oriented AI agent for answering company-policy questions using Retrieval-Augmented Generation (RAG), query routing, relevance filtering, asynchronous tool execution, durable checkpointing, human-in-the-loop approval, audit logging, safety guardrails, monitoring, automated evaluation, CI quality gates, and Docker deployment.
 
-The system uses Groq as the LLM provider with OpenAI-compatible models and local Hugging Face embeddings with ChromaDB for document retrieval.
+The system uses **Groq** as the LLM provider through its OpenAI-compatible API, with local Hugging Face embeddings and ChromaDB for document retrieval.
 
 ---
 
 ## 1. Overview
 
-The Company Policy Agent answers questions using a controlled set of company policy documents.
+The Company Policy Agent answers questions using a controlled collection of company policy documents.
 
 The system is designed to:
 
-- Route questions to the appropriate tool
-- Retrieve relevant policy documents
-- Reject irrelevant retrieval results
-- Generate answers grounded in retrieved documents
-- Avoid hallucinating answers when information is unavailable
-- Execute independent tools asynchronously
-- Persist agent state using durable checkpoints
-- Require human approval for risky operations
-- Maintain an audit trail
-- Detect prompt-injection attempts
-- Expose operational metrics
-- Run automated evaluation suites
-- Enforce quality gates in CI
-- Run as a Dockerized FastAPI service
+* Route questions to the appropriate execution path
+* Retrieve relevant policy documents
+* Apply retrieval relevance filtering
+* Generate answers grounded in retrieved documents
+* Return source documents with answers
+* Avoid fabricating answers when evidence is unavailable
+* Execute independent tools asynchronously
+* Persist agent state using durable checkpoints
+* Require human approval for risky operations
+* Maintain an audit trail
+* Detect prompt-injection attempts
+* Expose runtime metrics
+* Track LLM token usage and estimated cost
+* Run automated evaluation suites
+* Enforce quality gates in CI
+* Run as a Dockerized FastAPI service
+* Provide health and readiness checks
 
-This project demonstrates production-style AI-agent engineering with reliability, safety, observability, evaluation, and deployment controls.
+The project demonstrates production-style AI-agent engineering rather than only a basic RAG chatbot.
 
 ---
 
-# 2. Key Features
+# 2. Architecture
+
+```text
+                         User
+                           |
+                           v
+                  +----------------+
+                  |  Streamlit UI  |
+                  +--------+-------+
+                           |
+                           v
+                  +----------------+
+                  |    FastAPI     |
+                  |     /chat      |
+                  +--------+-------+
+                           |
+                           v
+                  +----------------+
+                  |    LangGraph   |
+                  |      Agent     |
+                  +--------+-------+
+                           |
+              +------------+------------+
+              |                         |
+              v                         v
+      +---------------+         +---------------+
+      |    Safety     |         | Query Router  |
+      |  Guardrails   |         +-------+-------+
+      +---------------+                 |
+                                        |
+                           +------------+------------+
+                           |                         |
+                           v                         v
+                  +----------------+          +-------------+
+                  | search_documents|         |   no_tool   |
+                  +--------+-------+          +-------------+
+                           |
+                           v
+                  +----------------+
+                  |    ChromaDB    |
+                  | Vector Storage  |
+                  +--------+-------+
+                           |
+                           v
+                  +----------------+
+                  |   Relevance    |
+                  |    Filter      |
+                  +--------+-------+
+                           |
+                           v
+                  +----------------+
+                  |     RAG        |
+                  | Context Build  |
+                  +--------+-------+
+                           |
+                           v
+                  +----------------+
+                  |    Groq LLM    |
+                  +--------+-------+
+                           |
+                           v
+                  +----------------+
+                  | Answer +       |
+                  | Sources + Trace|
+                  +--------+-------+
+                           |
+              +------------+------------+
+              |            |             |
+              v            v             v
+        Checkpoint      Audit       Runtime Metrics
+              |            |             |
+              +------------+-------------+
+                           |
+                           v
+                    Observability
+```
+
+The production service runs inside Docker.
+
+Persistent application state includes:
+
+```text
+Host storage
+    |
+    +--> ./storage/chroma
+    |        |
+    |        +--> Chroma vector database
+    |
+    +--> checkpoint_data
+             |
+             +--> LangGraph checkpoint state
+```
+
+---
+
+# 3. Key Features
 
 ## AI and RAG
 
-- ChromaDB vector retrieval
-- Local Hugging Face embeddings
-- Recursive document chunking
-- Retrieval relevance threshold
-- Grounded answer generation
-- Source citation
-- Honest "insufficient information" responses
+* ChromaDB vector retrieval
+* Local Hugging Face embeddings
+* Recursive document chunking
+* Retrieval relevance threshold
+* Grounded answer generation
+* Source citation
+* Honest insufficient-information responses
 
 ## Query Routing
 
-The agent determines whether a question should:
+The router determines whether a question should:
 
-- Use `search_documents`
-- Use another available tool
-- Require no tool
+* Use `search_documents`
+* Use another available tool
+* Require no tool
 
 Example:
 
-    "What is the company leave policy?"
-              |
-              v
-       search_documents
-              |
-              v
-          ChromaDB
-              |
-              v
-      Relevant documents
-              |
-              v
-             LLM
-              |
-              v
-       Answer + sources
+```text
+"What is the company leave policy?"
+                |
+                v
+        search_documents
+                |
+                v
+            ChromaDB
+                |
+                v
+       Relevant documents
+                |
+                v
+             Groq LLM
+                |
+                v
+         Answer + sources
+```
 
 Out-of-scope questions such as:
 
-    "What is Python?"
-    "What is the weather today?"
+```text
+"What is Python?"
+"What is the weather today?"
+```
 
-are routed to `no_tool`.
-
----
+can be routed to `no_tool`.
 
 ## Async Execution
 
-Independent tools can be executed in parallel to reduce overall execution latency.
+Independent tools can be executed in parallel.
 
 Implementation:
 
-    app/async_agent.py
-    app/async_tools.py
+```text
+app/async_agent.py
+app/async_tools.py
+```
 
-Benchmarking:
+Benchmark:
 
-    benchmark_async.py
+```text
+benchmark_async.py
+```
 
----
+Parallel execution is useful when independent tools can safely execute concurrently.
 
 ## Durable Checkpointing
 
 The agent maintains durable state using LangGraph checkpointing.
 
-Checkpointed information includes:
+Checkpointed state can include:
 
-- Request ID
-- Session ID
-- Question
-- Conversation history
-- Selected tool
-- Answer
-- Sources
-- Tools used
-- Approval information
-- Execution trace
+* Request ID
+* Session ID
+* Question
+* Conversation history
+* Selected tool
+* Answer
+* Sources
+* Tools used
+* Approval information
+* Execution trace
 
-Checkpoint storage is persisted through the Docker volume:
-
-    checkpoint_data
-
----
+Checkpoint storage is persisted through Docker storage.
 
 ## Human-in-the-Loop Approval
 
-Risky operations require explicit approval before execution.
+Potentially risky operations require explicit approval before execution.
 
 Examples include:
 
-    update_employee_record
-    delete_employee_record
-    send_email
+```text
+update_employee_record
+delete_employee_record
+send_email
+```
 
 Approval lifecycle:
 
-    PENDING
-       |
-       v
-    APPROVED
-       |
-       v
-    EXECUTED
-
-Rejected requests are blocked.
+```text
+PENDING
+   |
+   +---- REJECTED ----> BLOCKED
+   |
+   +---- APPROVED ----> EXECUTED
+                           |
+                           v
+                      AUDIT TRAIL
+```
 
 Search and retrieval operations do not require approval.
-
----
 
 ## Audit Trail
 
@@ -149,103 +250,73 @@ Tool calls and important actions are recorded with request identifiers.
 
 The audit system provides traceability for:
 
-- Tool calls
-- Success/failure
-- Request IDs
-- Approval status
-- Execution events
+* Tool calls
+* Success/failure
+* Request IDs
+* Approval status
+* Execution events
 
 Relevant modules:
 
-    app/audit.py
-    app/approval.py
-
----
+```text
+app/audit.py
+app/approval.py
+```
 
 ## Safety and Prompt Injection Protection
 
-The project includes input and output safety controls.
-
 Implemented controls include:
 
-- Input validation
-- Prompt-injection detection
-- Output validation
-- Risky-tool approval gates
-- Safety regression tests
-- Prompt-injection evaluation
+* Input validation
+* Prompt-injection detection
+* Output validation
+* Risky-tool restrictions
+* Human approval
+* Safety regression tests
+* Prompt-injection evaluation
 
 Relevant modules:
 
-    app/safety.py
-    app/guardrails.py
-    app/risky_tools.py
-
-The system is designed to reduce unsafe behavior but should not be considered universally secure against all possible attacks.
-
----
-
-# 3. Architecture
-
 ```text
-                         User
-                          |
-                          v
-                    Streamlit UI
-                          |
-                          v
-                    FastAPI /chat
-                          |
-                          v
-                    LangGraph Agent
-                          |
-              +-----------+-----------+
-              |                       |
-              v                       v
-        Safety / Guardrails      Query Router
-                                      |
-                        +-------------+-------------+
-                        |                           |
-                        v                           v
-                search_documents                 no_tool
-                        |
-                        v
-                    ChromaDB
-                        |
-                        v
-              Relevance Threshold
-                        |
-                 +------+------+
-                 |             |
-              Relevant      Irrelevant
-                 |             |
-                 v             v
-                RAG     Honest limitation
-                 |
-                 v
-              Groq LLM
-                 |
-                 v
-          Answer + Sources
-                 |
-                 v
-             API Response
-                 |
-          +------+------+
-          |             |
-          v             v
-       Metrics       Audit Trail
-          |
-          v
-   Monitoring Dashboard
+app/safety.py
+app/guardrails.py
+app/risky_tools.py
+```
+
+These controls reduce risk but should not be considered universal protection against every possible attack.
 
 ---
 
-# 4. Request Flow
+# 4. Technology Stack
+
+| Component           | Technology                               |
+| ------------------- | ---------------------------------------- |
+| Language            | Python 3.12                              |
+| LLM Provider        | Groq                                     |
+| LLM Interface       | OpenAI-compatible Groq endpoint          |
+| Primary Model       | `openai/gpt-oss-20b`                     |
+| Large Model         | `openai/gpt-oss-120b`                    |
+| Safety Model        | `openai/gpt-oss-safeguard-20b`           |
+| Agent Orchestration | LangGraph                                |
+| Embeddings          | `sentence-transformers/all-MiniLM-L6-v2` |
+| Vector Database     | ChromaDB                                 |
+| API                 | FastAPI                                  |
+| UI                  | Streamlit                                |
+| Server              | Uvicorn                                  |
+| Testing             | Pytest                                   |
+| Linting             | Ruff                                     |
+| Security Audit      | pip-audit                                |
+| Containerization    | Docker                                   |
+| CI                  | GitHub Actions                           |
+
+---
+
+# 5. Request Flow
 
 A normal policy request follows:
-                                
-                                User question
+
+```text
+User question
      |
      v
 Safety validation
@@ -274,13 +345,17 @@ Answer validation
      v
 Answer + Sources
      |
-     +---------> Metrics
+     +--------> Runtime Metrics
      |
-     +---------> Audit logging
+     +--------> Audit Logging
+     |
+     +--------> Checkpoint
+```
 
+For risky operations:
 
- For risky operations:
-        User request
+```text
+User request
      |
      v
 Safety validation
@@ -300,29 +375,13 @@ Human decision
                               |
                               v
                          Audit trail
+```
 
-                         
-| Component           | Technology                               |
-| ------------------- | ---------------------------------------- |
-| Language            | Python 3.12                              |
-| LLM Provider        | Groq                                     |
-| LLM Interface       | OpenAI-compatible Groq endpoint          |
-| Primary Model       | `openai/gpt-oss-20b`                     |
-| Large Model         | `openai/gpt-oss-120b`                    |
-| Safety Model        | `openai/gpt-oss-safeguard-20b`           |
-| Agent Orchestration | LangGraph                                |
-| Embeddings          | `sentence-transformers/all-MiniLM-L6-v2` |
-| Vector Database     | ChromaDB                                 |
-| API                 | FastAPI                                  |
-| UI                  | Streamlit                                |
-| Server              | Uvicorn                                  |
-| Testing             | Pytest                                   |
-| Linting             | Ruff                                     |
-| Security Audit      | pip-audit                                |
-| Containerization    | Docker                                   |
-| CI                  | GitHub Actions                           |
+---
 
+# 6. Project Structure
 
+```text
 week2day5proj1/
 |
 +-- app/
@@ -385,227 +444,334 @@ week2day5proj1/
 +-- .env
 +-- .env.example
 +-- .gitignore
-+-- evaluation_results.json
 +-- pytest.ini
 +-- README.md
 +-- requirements.txt
-+-- run_all.py
 +-- SECURITY.md
-|
-+-- test_approval.py
-+-- test_async_tools.py
-+-- test_audit.py
-+-- test_checkpoint.py
-+-- test_groq.py
-+-- test_llm.py
-+-- test_metrics.py
+```
 
-7. Environment Variables
+---
 
-Create a local .env file.
+# 7. Environment Variables
+
+Create a local `.env` file.
 
 Example:
 
+```text
 GROQ_API_KEY=your_groq_api_key_here
 
 GROQ_MODEL=openai/gpt-oss-20b
 GROQ_LARGE_MODEL=openai/gpt-oss-120b
 GROQ_SAFETY_MODEL=openai/gpt-oss-safeguard-20b
+```
+
+The project also uses configuration for:
+
+```text
+LANGCHAIN_TRACING_V2
+LANGCHAIN_PROJECT
+LANGCHAIN_ENDPOINT
+EMBEDDING_MODEL
+```
 
 Never commit the real API key.
 
 The repository contains:
 
+```text
 .env.example
+```
 
 for configuration reference.
 
-Do not use OPENAI_API_KEY for this project. Groq is the API provider.
+**Do not use `OPENAI_API_KEY` for this project. Groq is the API provider.**
 
-8. Clean Clone Setup
+---
+
+# 8. Clean Clone Setup
 
 Clone the repository:
 
+```powershell
 git clone <repository-url>
 cd week2day5proj1
+```
 
 Create a virtual environment:
 
+```powershell
 python -m venv venv
+```
 
 Activate it in Windows PowerShell:
 
+```powershell
 .\venv\Scripts\Activate.ps1
+```
 
 Install dependencies:
 
+```powershell
 pip install -r requirements.txt
+```
 
-Create .env from .env.example and configure the Groq API key.
+Create `.env` from `.env.example` and configure the Groq API key.
 
-9. Build the Retrieval Index
+---
 
-The policy documents are stored in the project's data directory.
+# 9. Build the Retrieval Index
+
+Policy documents are stored in the project's `data` directory.
 
 The ingestion script is:
 
+```text
 app/ingest.py
+```
 
 Build the Chroma retrieval index:
 
-python app/ingest.py
+```powershell
+python -m app.ingest
+```
 
 Current policy documents:
 
+```text
 company_policy.pdf
 hr_policy.pdf
 it_policy.pdf
+```
 
 Verified ingestion result:
 
+```text
 PDF pages loaded : 21
 Chunks created   : 39
-10. Run Tests
+```
+
+The production Chroma storage location is:
+
+```text
+storage/chroma
+```
+
+---
+
+# 10. Run Tests
 
 Run the complete test suite:
 
-pytest -q
+```powershell
+python -m pytest -q
+```
 
 Latest verified result:
 
+```text
 40 passed
+```
 
 There is currently one Chroma/OpenTelemetry deprecation warning. It does not cause the test suite to fail.
 
-11. Run Code Quality Checks
+---
+
+# 11. Code Quality Checks
 
 Run Ruff:
 
-ruff check app tests evals *.py
-
-Run whitespace/diff validation:
-
-git diff --check
+```powershell
+python -m ruff check .
+```
 
 Latest verification:
 
-Ruff:
-All checks passed
+```text
+All checks passed!
+```
 
-git diff --check:
-Passed
-12. Local API Development
+Run the Git whitespace check:
+
+```powershell
+git diff --check
+```
+
+---
+
+# 12. Local API Development
 
 The API is implemented in:
 
+```text
 app/api.py
+```
 
 Run the API locally:
 
+```powershell
 uvicorn app.api:app --reload --host 0.0.0.0 --port 8000
+```
 
 API:
 
+```text
 http://localhost:8000
-13. API Endpoints
-Health
+```
+
+---
+
+# 13. API Endpoints
+
+## Health
+
+```text
 GET /health
+```
 
 Test:
 
+```powershell
 Invoke-RestMethod http://localhost:8000/health
+```
 
 Verified response:
 
-status   service              version
-------   -------              -------
-healthy  company-policy-agent 1.1.0
-Readiness
+```text
+status   service                version
+------   -------                -------
+healthy  company-policy-agent   1.1.0
+```
+
+## Readiness
+
+```text
 GET /ready
+```
 
 Test:
 
+```powershell
 Invoke-RestMethod http://localhost:8000/ready
+```
 
 The readiness check verifies:
 
-Groq API key
-Groq model
-Chroma storage
-Checkpoint storage
-Chat
+* Groq API key
+* Groq model
+* Chroma storage
+* Checkpoint storage
+
+Verified state:
+
+```text
+groq_api_key=True
+groq_model=True
+chroma_storage=True
+checkpoint_storage=True
+```
+
+## Chat
+
+```text
 POST /chat
+```
 
 The endpoint executes the production agent flow and returns:
 
-Request ID
-Thread ID
-Answer
-Sources
-Tools used
-Trace
-Metrics
+* Request ID
+* Thread ID
+* Answer
+* Sources
+* Tools used
+* Trace
+
+## Metrics
+
+```text
 GET /metrics
+```
 
 The metrics endpoint exposes:
 
-Request counts
-Successful requests
-Errors
-Latency
-Error rate
-LLM requests
-Token usage
-Estimated cost
-Retrieval counters
-Tool counters
-Checkpoint
+* Request counts
+* Successful requests
+* Errors
+* Latency
+* Error rate
+* LLM requests
+* Token usage
+* Estimated cost
+* Retrieval counters
+* Tool counters
+
+## Checkpoint
+
+```text
 GET /checkpoint/{thread_id}
+```
 
 Returns persisted agent state for a LangGraph thread.
 
-14. Query Routing
+---
+
+# 14. Query Routing
 
 The router determines which execution path a question should take.
 
 Examples:
 
-Query	Expected route
-What is the company leave policy?	search_documents
-What does the company say about professional conduct?	search_documents
-What are the company's confidentiality requirements?	search_documents
-What is the company's IT security policy?	search_documents
-What is Python?	no_tool
-What is the weather today?	no_tool
+| Query                                                 | Expected route     |
+| ----------------------------------------------------- | ------------------ |
+| What is the company leave policy?                     | `search_documents` |
+| What does the company say about professional conduct? | `search_documents` |
+| What are the company's confidentiality requirements?  | `search_documents` |
+| What is the company's IT security policy?             | `search_documents` |
+| What is Python?                                       | `no_tool`          |
+| What is the weather today?                            | `no_tool`          |
+
+The routing evaluation is a separate evaluation suite from the main RAG quality evaluation.
 
 Latest routing evaluation:
 
+```text
 Total queries: 7
 Passed: 7
-Overall pass rate: 100.00%
+Failed: 0
+Overall pass rate: 100%
+```
 
-Category results:
+Breakdown:
 
-HR:            2/2 (100.00%)
-Company:       1/1 (100.00%)
-IT:            1/1 (100.00%)
-Out-of-scope:  3/3 (100.00%)
+```text
+HR:           2/2
+Company:      1/1
+IT:           1/1
+Out-of-scope: 3/3
+```
 
-No routing failures were reported.
+Because this is a small targeted evaluation set, these results should not be interpreted as universal routing accuracy.
 
-15. Retrieval and RAG
+---
+
+# 15. Retrieval and RAG
 
 Retrieval implementation:
 
+```text
 app/retrieval.py
 app/rag.py
+```
 
 Embedding model:
 
+```text
 sentence-transformers/all-MiniLM-L6-v2
+```
 
-The retrieval flow:
+Retrieval flow:
 
+```text
 Question
    |
    v
@@ -625,479 +791,727 @@ LLM context
    |
    v
 Answer
+```
 
 Current empirically calibrated maximum retrieval distance:
 
+```text
 1.10
+```
 
-Professional-conduct queries produced distances approximately around:
+For the professional-conduct query, observed distances were approximately:
 
+```text
 1.04 - 1.08
+```
 
-An unrelated relocation-policy query produced distances approximately around:
+An unrelated query previously produced distances approximately around:
 
+```text
 1.29 - 1.34
+```
 
 The threshold is calibrated for the current dataset and should be recalibrated if the documents, embedding model, chunking strategy, or retrieval system changes significantly.
 
-16. Honest Retrieval Behavior
+---
+
+# 16. Retrieval Quality Investigation
+
+Retrieval quality was investigated using a dedicated benchmark.
+
+The investigation considered:
+
+* Relevant document retrieval
+* Top-1 retrieval
+* Top-2 retrieval
+* Top-3 retrieval
+* Query expansion
+* Chunk size
+* Chunk overlap
+* Section-aware chunking
+* Document metadata
+* Embedding behavior
+
+The final configuration uses:
+
+```text
+Embedding:
+sentence-transformers/all-MiniLM-L6-v2
+
+Chunk size:
+800
+
+Chunk overlap:
+120
+
+Vector store:
+ChromaDB
+
+Collection:
+capstone_documents
+```
+
+Section-aware chunking was tested but was not adopted because it did not improve the benchmark's top-1 result.
+
+---
+
+# 17. Honest Retrieval Behavior
 
 If no retrieved document passes the relevance threshold, the system does not fabricate an answer.
 
-It returns:
+It returns an honest limitation such as:
 
+```text
 I don't have enough information in the provided documents to answer that question.
+```
 
-Example:
+This behavior is important because a RAG system should distinguish between:
 
-What is the company's relocation allowance policy?
+```text
+Relevant evidence found
+```
 
-If the indexed documents do not contain relevant information, the system returns an honest limitation rather than inventing a policy.
+and:
 
-17. Async Parallel Tool Execution
+```text
+No sufficient evidence found
+```
+
+rather than treating every question as answerable.
+
+---
+
+# 18. Async Parallel Tool Execution
 
 Async execution is implemented in:
 
+```text
 app/async_agent.py
 app/async_tools.py
+```
 
 Independent tools can run concurrently.
 
-Benchmarking:
+Benchmark:
 
+```text
 benchmark_async.py
+```
 
 Conceptually:
 
+```text
 Sequential:
 
 Tool A -> Tool B -> Tool C
-             |
-             v
-        Total latency
+                   |
+                   v
+              Total latency
+```
 
 versus:
 
+```text
 Parallel:
 
 Tool A ----+
 Tool B ----+----> Combined result
 Tool C ----+
+```
 
 Parallel execution can reduce latency when tools are independent and safe to execute concurrently.
 
-18. Durable Checkpointing
+---
+
+# 19. Durable Checkpointing
 
 Checkpoint implementation:
 
+```text
 app/checkpoint.py
 app/memory.py
 app/state.py
+```
 
 Persisted state can include:
 
-Request ID
-Session ID
-Question
-Conversation history
-Selected tool
-Answer
-Sources
-Tools used
-Approval status
-Execution trace
+* Request ID
+* Session ID
+* Question
+* Conversation history
+* Selected tool
+* Answer
+* Sources
+* Tools used
+* Approval status
+* Execution trace
 
 Docker checkpoint storage:
 
+```text
 /app/storage/checkpoints
+```
 
-Volume:
+Persistent volume:
 
+```text
 checkpoint_data
-19. Human-in-the-Loop Approval
+```
+
+---
+
+# 20. Human-in-the-Loop Approval
 
 Approval implementation:
 
+```text
 app/approval.py
 app/risky_tools.py
+```
 
 Risky operations include:
 
+```text
 update_employee_record
 delete_employee_record
 send_email
+```
 
 Approval lifecycle:
 
+```text
 PENDING
    |
    +---- REJECTED ----> BLOCKED
    |
    +---- APPROVED ----> EXECUTED
-                              |
-                              v
-                         AUDIT TRAIL
+                           |
+                           v
+                       AUDIT TRAIL
+```
 
 Search operations do not require approval.
 
-20. Audit Trail
+Tests cover pending, rejected, and approved execution paths.
+
+---
+
+# 21. Audit Trail
 
 Audit implementation:
 
+```text
 app/audit.py
+```
 
 The system records information such as:
 
-Request IDs
-Tool calls
-Tool success/failure
-Approval status
-Execution events
+* Request IDs
+* Tool calls
+* Tool success/failure
+* Approval status
+* Execution events
 
-This provides traceability for important agent actions.
+Request IDs allow important actions to be correlated across the application.
 
-21. Safety and Prompt Injection
+---
+
+# 22. Safety and Prompt Injection
 
 Safety modules:
 
+```text
 app/safety.py
 app/guardrails.py
 app/risky_tools.py
+```
 
 Safety controls include:
 
-Input validation
-Prompt-injection detection
-Output validation
-Risky-tool restrictions
-Human approval
-Safety regression tests
-Prompt-injection evaluation
+* Input validation
+* Prompt-injection detection
+* Output validation
+* Risky-tool restrictions
+* Human approval
+* Safety regression tests
+* Prompt-injection evaluation
 
 Run safety tests:
 
-pytest -q tests/test_safety.py tests/test_approval_safety.py
+```powershell
+python -m pytest -q tests/test_safety.py tests/test_approval_safety.py
+```
 
-Run prompt-injection evaluation:
+Run the prompt-injection evaluation:
 
-python evals/evaluate_injection.py
+```powershell
+python -m evals.evaluate_injection
+```
 
-The CI injection-resistance gate requires:
+Latest injection evaluation:
 
-95%
+```text
+5 cases
+5 passed
+0 failed
+100% resistance among completed cases
+```
 
-This is a test-set evaluation threshold and is not a guarantee against all future prompt-injection attacks.
+The injection suite is intentionally small and should not be interpreted as proof that the system is immune to all future attacks.
 
-22. Monitoring
+---
+
+# 23. Monitoring
 
 Monitoring implementation:
 
+```text
 app/metrics.py
+```
 
 Tracked metrics include:
 
-Total requests
-Successful requests
-Failed requests
-Error rate
-Latency
-LLM request count
-Prompt tokens
-Completion tokens
-Total tokens
-Estimated LLM cost
-Cost per request
-Retrieval success
-Tool usage
+* Total requests
+* Successful requests
+* Failed requests
+* Error rate
+* Chat latency
+* Retrieval latency
+* LLM latency
+* LLM request count
+* Prompt tokens
+* Completion tokens
+* Total tokens
+* Estimated LLM cost
+* Cost per request
+* Retrieval success
+* Tool usage
 
 Metrics endpoint:
 
+```text
 GET /metrics
+```
 
-Production request flow:
+The current metrics implementation provides application-level runtime telemetry.
 
-Agent UI
-   |
-   v
-FastAPI /chat
-   |
-   v
-LangGraph
-   |
-   v
-Router
-   |
-   v
-Chroma
-   |
-   v
-Groq
-   |
-   v
-Metrics
-   |
-   v
-Monitoring Dashboard
+The metrics are currently stored in memory and therefore reset when the application restarts.
 
-The production chat path is connected to the same metrics service used by the monitoring dashboard.
+A larger deployment could export these metrics to an external monitoring system such as Prometheus/Grafana.
 
-23. Cost Tracking
+---
+
+# 24. Cost Tracking
 
 The LLM layer records:
 
-Prompt tokens
-Completion tokens
-Total tokens
-Estimated request cost
-Total estimated cost
+* Prompt tokens
+* Completion tokens
+* Total tokens
+* Estimated request cost
+* Total estimated cost
 
-Configured models:
+Configured models include:
 
+```text
 openai/gpt-oss-20b
 openai/gpt-oss-120b
 openai/gpt-oss-safeguard-20b
+```
 
-Cost figures are estimates based on configured model pricing and observed token usage.
+Cost figures are estimates based on observed token usage and configured pricing assumptions.
 
-24. Evaluation Suite
+---
+
+# 25. Model Routing
+
+The project supports a small-model-first routing strategy:
+
+```text
+openai/gpt-oss-20b
+        |
+        | escalation
+        v
+openai/gpt-oss-120b
+```
+
+The purpose is to use the smaller model for normal requests and escalate when required.
+
+The cost analysis contains a modeled comparison between:
+
+```text
+Always use large model
+```
+
+and:
+
+```text
+Small model first + escalation
+```
+
+Under the documented assumptions, the modeled routed strategy showed approximately **45% lower cost** than the modeled always-large baseline.
+
+This is a modeled estimate, not a guaranteed production savings figure.
+
+---
+
+# 26. Evaluation Suite
 
 Evaluation implementation:
 
+```text
 evals/
+```
 
 Main evaluation scripts:
 
+```text
 evaluate.py
 evaluate_routing.py
 evaluate_injection.py
 check_evaluation_gate.py
+```
 
 Datasets:
 
+```text
 evaluation_dataset.json
 query_routing_dataset.json
 injection_dataset.json
+```
 
-Evaluation results:
+Results:
 
+```text
 evaluation_results.json
 routing_evaluation_results.json
 injection_results.json
-25. Routing Evaluation Results
+```
+
+The project uses separate evaluation suites because RAG quality, routing behavior, and prompt-injection resistance measure different properties.
+
+---
+
+# 27. Main RAG Evaluation Results
+
+The main evaluation contains five representative cases.
 
 Latest verified result:
 
-Total queries: 7
-Passed: 7
-Overall pass rate: 100.00%
+```text
+Completed cases: 5
+Passed: 5
+Failed: 0
+Errors: 0
+Completion rate: 100%
+Pass rate among completed cases: 100%
+Source hit rate: 100%
+In-scope retrieval success: 100%
+Out-of-scope no-evidence: 1/1
+```
 
-Breakdown:
+Additional measurements:
 
-HR:            2/2 (100.00%)
-Company:       1/1 (100.00%)
-IT:            1/1 (100.00%)
-Out-of-scope:  3/3 (100.00%)
+```text
+Average documents retrieved: 3
+Average prompt tokens: 470.8
+Average completion tokens: 360.2
+Average total tokens: 831
+Average cost/query: $0.000143
+```
 
-No failures were reported.
+The evaluation dataset is small and should not be interpreted as evidence of 100% real-world accuracy.
 
-26. AI Evaluation Quality Gate
+---
 
-Run:
+# 28. Latency Evaluation
 
-python evals/check_evaluation_gate.py
+The evaluation demonstrated a significant cold-start effect.
 
-Latest verified quality gate:
+Measured cold-start latency:
 
-AI EVALUATION QUALITY GATE
-Overall pass rate: 100.00%
-Required minimum: 90.00%
+```text
+21.539 seconds
+```
 
-Overall pass-rate gate passed
+Warm-request measurements:
 
-Category results:
-  HR: 2/2 (100.00%)
-  Company: 1/1 (100.00%)
-  IT: 1/1 (100.00%)
-  Out-of-scope: 1/1 (100.00%)
+```text
+Warm average: 801.66 ms
+Warm p50:     838.48 ms
+Warm p95:   1,410.55 ms
+```
 
-Query-type pass-rate gates passed
+The API therefore warms up the retrieval model during startup.
 
-P95 latency: 15593.67 ms
-Maximum allowed: 20000.00 ms
-P95 latency gate passed
+This reduces the likelihood that the first user request pays the full embedding-model initialization cost.
 
-ALL AI QUALITY GATES PASSED
+Latency remains dependent on:
 
-The quality gate checks:
+* Embedding initialization
+* Retrieval
+* Network conditions
+* Groq API latency
+* Model generation time
+* Runtime environment
 
-Overall pass rate
-Query-category pass rates
-P95 latency
+---
 
-The separate routing evaluation reported a higher P95 because the first query experienced an embedding-model cold-start effect. That value should not automatically be treated as steady-state latency.
+# 29. Evaluation Cost Projection
 
-27. CI/CD
+Measured average cost from the main evaluation:
+
+```text
+$0.000143/query
+```
+
+Projected costs from the documented evaluation assumptions:
+
+|          Volume | Projected cost |
+| --------------: | -------------: |
+|   1,000 queries |         $0.143 |
+|  10,000 queries |         $1.434 |
+| 100,000 queries |        $14.338 |
+
+These are modeled projections rather than guaranteed future bills.
+
+---
+
+# 30. AI Evaluation Quality Gate
+
+The evaluation quality gate checks:
+
+* Overall pass rate
+* Query-category pass rates
+* P95 latency
+
+The latest verified gate passed.
+
+The quality gate used:
+
+```text
+Minimum overall pass rate: 90%
+Maximum allowed P95 latency: 20 seconds
+```
+
+The latest gate reported:
+
+```text
+Overall pass rate: 100%
+P95 latency:       15.594 seconds
+```
+
+All configured AI quality gates passed.
+
+The routing evaluation is a separate suite and should not be conflated with the main RAG quality gate.
+
+---
+
+# 31. CI/CD
 
 The repository contains two GitHub Actions workflows:
 
+```text
 .github/workflows/ci.yml
 .github/workflows/evaluation.yml
-CI Workflow
+```
 
-The CI workflow performs:
+The CI workflow performs checks including:
 
-Unit and integration tests
-Retrieval index construction
-Ruff linting
-Dependency security audit
-Docker build
-Safety and approval regression tests
-AI evaluation quality gate
+* Dependency installation
+* Retrieval index construction
+* Ruff linting
+* Pytest
+* AI evaluation quality gate
+* Dependency auditing
+* Docker build
 
-The retrieval index is built during CI:
+The retrieval index is built during CI so that evaluation and tests can reproduce the required vector-store state.
 
-python app/ingest.py
+The evaluation workflow additionally checks prompt-injection resistance.
 
-This allows a clean clone to reproduce the required retrieval state instead of depending on a pre-existing local Chroma database.
+---
 
-AI Evaluation Workflow
-
-The evaluation workflow performs:
-
-Full test suite
-Ruff
-Prompt-injection evaluation
-Injection-resistance gate
-
-Minimum injection resistance:
-
-95%
-
-If the result falls below the threshold, the workflow fails.
-
-28. Dependency Security
+# 32. Dependency Security
 
 The project uses:
 
+```text
 pip-audit
+```
 
-The dependency audit checks:
+The current ChromaDB dependency is affected by four documented security advisories.
 
-requirements.txt
+These findings are documented in:
 
-The current CI configuration explicitly ignores:
+```text
+SECURITY.md
+```
 
-PYSEC-2026-311
-PYSEC-2026-3813
-PYSEC-2026-3814
-PYSEC-2026-3815
+The current application architecture uses ChromaDB as local persistent storage and does not expose a standalone ChromaDB server to untrusted clients.
 
-These advisories should continue to be reviewed when dependency updates become available.
+This reduces exposure to the documented server/API attack paths but does **not** remove the underlying dependency advisories.
 
-Therefore, the security result should be interpreted as:
+The project therefore treats these findings as an explicit architecture-scoped security exception.
 
-No unignored known vulnerabilities
+The dependency should be re-evaluated when an appropriate patched release becomes available.
+
+The security status should therefore be understood as:
+
+```text
+Known ChromaDB advisories are documented
+and architecture-scoped.
+```
 
 rather than:
 
-No known vulnerabilities exist
+```text
+No known vulnerabilities exist.
+```
 
-Additional security information:
+---
 
-SECURITY.md
-29. Docker Deployment
+# 33. Docker Deployment
 
 Docker files:
 
+```text
 Dockerfile
 docker-compose.yml
+```
 
 Base image:
 
+```text
 python:3.12-slim
+```
 
 Application command:
 
+```text
 uvicorn app.api:app --host 0.0.0.0 --port 8000
+```
 
 Build:
 
+```powershell
 docker compose build
+```
 
 Start:
 
+```powershell
 docker compose up -d
+```
 
 Check:
 
+```powershell
 docker compose ps
+```
 
-Expected:
+Expected status:
 
+```text
 healthy
-30. Docker Volumes
+```
 
-Two named volumes are used:
+---
 
-chroma_data
-checkpoint_data
+# 34. Docker Storage
 
-Mounts:
+The production Docker Compose configuration persists application state using:
 
-chroma_data
-    |
-    v
+```text
+./storage/chroma
+      |
+      v
 /app/storage/chroma
+```
+
+for ChromaDB and:
+
+```text
 checkpoint_data
-    |
-    v
+      |
+      v
 /app/storage/checkpoints
+```
 
-These volumes allow persistent vector and checkpoint storage across normal container restarts.
+for LangGraph checkpoints.
 
-31. Docker Healthcheck
+The Chroma storage uses a host bind mount so the deployed application uses the current retrieval index.
 
-The container healthcheck calls:
+Checkpoint state uses a persistent Docker volume.
 
-GET /health
+These storage mechanisms allow state to survive normal container restarts.
+
+---
+
+# 35. Docker Healthcheck
+
+The Docker healthcheck calls:
+
+```text
+/health
+```
 
 Configuration:
 
+```text
 Start period: 30 seconds
-Interval: 30 seconds
-Timeout: 10 seconds
-Retries: 3
+Interval:     30 seconds
+Timeout:      10 seconds
+Retries:      3
+```
 
 Verified production response:
 
-status   service              version
-------   -------              -------
-healthy  company-policy-agent 1.1.0
-32. Readiness Check
+```text
+status   service                version
+------   -------                -------
+healthy  company-policy-agent   1.1.0
+```
+
+---
+
+# 36. Readiness Check
 
 The readiness endpoint:
 
+```text
 GET /ready
+```
 
 checks:
 
+```text
 Groq API key
 Groq model
 Chroma storage
 Checkpoint storage
+```
 
 Verified readiness state:
 
+```text
 groq_api_key=True
 groq_model=True
 chroma_storage=True
 checkpoint_storage=True
-33. Production Logging
+```
 
-The API uses structured request logging.
+This separates basic process health from application dependency readiness.
 
-Logged fields include:
+---
 
+# 37. Production Logging
+
+The API uses request logging for operational visibility.
+
+Logged information includes fields such as:
+
+```text
 timestamp
 level
 logger
@@ -1106,277 +1520,403 @@ request_id
 endpoint
 latency_ms
 status
+```
 
-Example:
+Request IDs allow application activity to be correlated with traces and audit events.
 
-HTTP request completed
-endpoint: /health
-latency_ms: 0.59
-status: 200
+---
 
-Request IDs allow requests to be correlated with logs and traces.
+# 38. Live Production Verification
 
-34. Production Verification
+A real request was executed against the running Docker deployment:
 
-The production Docker deployment has been locally verified with:
+```text
+POST /chat
+```
 
-docker compose config
-docker compose build
-docker compose up -d
-docker compose ps
+Question:
 
-Final container status:
+```text
+What does the company say about professional conduct?
+```
 
-Up ... (healthy)
+The deployed service successfully:
 
-Health endpoint:
+1. Accepted the request through FastAPI
+2. Routed it to `search_documents`
+3. Retrieved relevant policy documents
+4. Generated a grounded answer through Groq
+5. Returned `hr_policy.pdf`
+6. Returned `company_policy.pdf`
+7. Returned a request ID
+8. Returned a thread ID
+9. Returned execution trace information
+10. Recorded runtime metrics
 
-HTTP 200
-healthy
+Live metrics from the request:
 
-Readiness endpoint:
+| Metric                   |    Result |
+| ------------------------ | --------: |
+| Successful chat requests |         1 |
+| Retrieval successes      |         1 |
+| LLM requests             |         1 |
+| Error rate               |        0% |
+| Chat latency             |  7,526 ms |
+| Retrieval latency        |  4,357 ms |
+| LLM latency              |  2,370 ms |
+| Prompt tokens            |       433 |
+| Completion tokens        |       395 |
+| Total tokens             |       828 |
+| Estimated request cost   | $0.000151 |
 
-ready
+Final Docker verification:
 
-The application logs also confirmed successful HTTP requests and request IDs.
+```text
+Container: healthy
+/health:   healthy
+/ready:    ready
+```
 
-35. Useful Commands
-Install dependencies
+Final Git verification:
+
+```text
+Branch: main
+Remote: origin/main
+Working tree: clean
+```
+
+This demonstrates that the deployed application was tested with a real end-to-end request rather than only through automated tests.
+
+---
+
+# 39. Useful Commands
+
+Install dependencies:
+
+```powershell
 pip install -r requirements.txt
-Build retrieval index
-python app/ingest.py
-Run tests
-pytest -q
-Run routing evaluation
-python evals/evaluate_routing.py
-Run evaluation quality gate
-python evals/check_evaluation_gate.py
-Run prompt-injection evaluation
-python evals/evaluate_injection.py
-Run Ruff
-ruff check app tests evals *.py
-Check whitespace
+```
+
+Build retrieval index:
+
+```powershell
+python -m app.ingest
+```
+
+Run tests:
+
+```powershell
+python -m pytest -q
+```
+
+Run routing evaluation:
+
+```powershell
+python -m evals.evaluate_routing
+```
+
+Run main evaluation:
+
+```powershell
+python -m evals.evaluate
+```
+
+Run evaluation quality gate:
+
+```powershell
+python -m evals.check_evaluation_gate
+```
+
+Run prompt-injection evaluation:
+
+```powershell
+python -m evals.evaluate_injection
+```
+
+Run Ruff:
+
+```powershell
+python -m ruff check .
+```
+
+Check whitespace:
+
+```powershell
 git diff --check
-Build Docker image
+```
+
+Build Docker image:
+
+```powershell
 docker compose build
-Start Docker service
+```
+
+Start Docker service:
+
+```powershell
 docker compose up -d
-Stop Docker service
+```
+
+Stop Docker service:
+
+```powershell
 docker compose down
-Check container
+```
+
+Check container:
+
+```powershell
 docker compose ps
-View logs
+```
+
+View logs:
+
+```powershell
 docker compose logs --tail=100 company-policy-agent
-Health
+```
+
+Health:
+
+```powershell
 Invoke-RestMethod http://localhost:8000/health
-Readiness
+```
+
+Readiness:
+
+```powershell
 Invoke-RestMethod http://localhost:8000/ready
-Metrics
+```
+
+Metrics:
+
+```powershell
 Invoke-RestMethod http://localhost:8000/metrics
-36. Startup Helper
+```
 
-The repository includes:
+---
 
-run_all.py
+# 40. Known Limitations
 
-This provides a convenient local startup workflow.
+## Evaluation Coverage
 
-Individual commands in this README can also be used when running individual components during development.
+The main RAG evaluation contains only five cases.
 
-37. Known Limitations
-Retrieval Threshold
+The routing evaluation contains seven cases.
+
+The injection evaluation contains five cases.
+
+These targeted datasets are useful regression tests but do not represent every possible production query or attack.
+
+## Retrieval Threshold
 
 The current relevance threshold was calibrated against the current policy dataset.
 
-It should be recalibrated when:
+It should be re-evaluated when:
 
-Documents change significantly
-Embeddings change
-Chunking changes
-The retrieval model changes
-Cold-Start Latency
+* Documents change significantly
+* Embeddings change
+* Chunking changes
+* The retrieval model changes
 
-The first retrieval request can be significantly slower because the embedding model may need to load into memory.
+## Cold-Start Latency
 
-Therefore, first-request latency should not automatically be treated as normal steady-state latency.
+The first retrieval request can be significantly slower because the embedding model may need to initialize.
 
-Monitoring Latency
+Startup warm-up reduces this impact for the deployed API.
 
-The current metrics system records multiple types of latency.
+## Runtime Metrics
 
-HTTP/API latency and LLM-related latency should be interpreted according to their metric definitions rather than treating a single metric as complete end-to-end model latency.
+The current metrics implementation stores measurements in memory.
 
-Security
+Metrics reset when the application restarts.
 
-The system includes multiple safety controls, but no prompt-injection defense should be considered perfect.
+A larger production deployment would normally export telemetry to an external monitoring system.
 
-Production deployments should continue to:
+## Cost
 
-Expand attack datasets
-Run regression evaluations
-Review tool permissions
-Rotate secrets
-Update dependencies
-Monitor unusual behavior
-Evaluation Coverage
+Cost calculations are estimates based on observed token usage and documented pricing assumptions.
 
-The current evaluation datasets are targeted to the capstone requirements.
+Actual provider billing can vary.
 
-A passing evaluation does not guarantee correct behavior for every possible future question.
+## Security
 
-38. Security Practices
+The application includes multiple safety controls, but no prompt-injection defense should be considered perfect.
+
+The ChromaDB dependency also has documented security advisories that remain an explicit architecture-scoped exception.
+
+## Evaluation Scoring
+
+Some evaluation checks use targeted or keyword-based criteria.
+
+Future improvements could include:
+
+* Larger datasets
+* Human-reviewed golden sets
+* Semantic answer evaluation
+* Retrieval precision/recall measurements
+* Judge calibration
+* Production trace sampling
+* Regression testing from real user queries
+
+---
+
+# 41. Security Practices
 
 Never commit:
 
+```text
 .env
 API keys
 Access tokens
 Credentials
 Private configuration
+```
 
 Use:
 
+```text
 .env.example
+```
 
 for configuration documentation.
 
 Before pushing:
 
+```powershell
 git status
 git diff --check
+```
 
 If an API key is exposed, revoke it and generate a replacement.
 
-39. Final Verification Checklist
+---
+
+# 42. Final Verification Checklist
 
 Before considering the repository ready:
 
-[ ] .env is not committed
-[ ] .env.example contains placeholders only
-[ ] Retrieval index can be built from source documents
-[ ] pytest passes
-[ ] Ruff passes
-[ ] git diff --check passes
-[ ] Docker Compose configuration is valid
-[ ] Docker image builds
-[ ] Container starts
-[ ] Container becomes healthy
-[ ] /health returns healthy
-[ ] /ready returns ready
-[ ] /chat returns an answer
-[ ] Sources are returned for grounded policy questions
-[ ] Out-of-scope questions are handled appropriately
-[ ] Checkpoint persistence works
-[ ] Risky operations require approval
-[ ] Audit trail records tool calls
-[ ] Prompt-injection tests pass
-[ ] Evaluation quality gate passes
-[ ] CI workflows are configured
-[ ] Security audit is reviewed
-40. Current Verification Results
-Test Suite
+* [x] `.env` is not committed
+* [x] `.env.example` contains placeholders
+* [x] Retrieval index can be built from source documents
+* [x] Pytest passes
+* [x] Ruff passes
+* [x] `git diff --check` passes
+* [x] Docker Compose configuration is valid
+* [x] Docker image builds
+* [x] Container starts
+* [x] Container becomes healthy
+* [x] `/health` returns healthy
+* [x] `/ready` returns ready
+* [x] `/chat` returns an answer
+* [x] Sources are returned for grounded policy questions
+* [x] Out-of-scope behavior is evaluated
+* [x] Checkpoint persistence is implemented
+* [x] Risky operations require approval
+* [x] Audit trail records tool calls
+* [x] Prompt-injection tests pass
+* [x] Main evaluation quality gate passes
+* [x] CI workflows are configured
+* [x] Security audit is reviewed
+* [x] Live production request verified
+* [x] Runtime metrics verified
+* [x] Git working tree verified clean
+
+---
+
+# 43. Current Verification Results
+
+## Test Suite
+
+```text
 40 passed
-Ruff
+```
+
+## Ruff
+
+```text
 All checks passed!
-Git Diff Check
-Passed
-Query Routing Evaluation
+```
+
+## Dependency Check
+
+```text
+No broken requirements found.
+```
+
+## Main RAG Evaluation
+
+```text
+Cases:        5
+Passed:       5
+Failed:       0
+Errors:       0
+Completion:   100%
+Source hit:   100%
+```
+
+## Query Routing Evaluation
+
+```text
 Total queries: 7
-Passed: 7
-Overall pass rate: 100.00%
+Passed:        7
+Failed:        0
+Pass rate:     100%
+```
 
-Category results:
+## Prompt-Injection Evaluation
 
-HR:            2/2 (100.00%)
-Company:       1/1 (100.00%)
-IT:            1/1 (100.00%)
-Out-of-scope:  3/3 (100.00%)
-AI Evaluation Quality Gate
-Overall pass rate: 100.00%
-Required minimum: 90.00%
+```text
+Total cases:   5
+Passed:        5
+Failed:        0
+Resistance:    100% among completed cases
+```
 
-P95 latency: 15593.67 ms
-Maximum allowed: 20000.00 ms
+## AI Quality Gate
+
+```text
+Overall pass rate: 100%
+Required minimum:  90%
+P95 latency:       15.594 seconds
+Maximum allowed:   20 seconds
 
 ALL AI QUALITY GATES PASSED
-Production Docker Verification
-Docker build: PASSED
-Container startup: PASSED
-Container health: HEALTHY
-/health: HTTP 200
-/ready: READY
-41. Final Architecture Summary
-                         +----------------+
-                         |      User      |
-                         +-------+--------+
-                                 |
-                                 v
-                         +---------------+
-                         | Streamlit UI  |
-                         +-------+-------+
-                                 |
-                                 v
-                         +---------------+
-                         |   FastAPI     |
-                         |     /chat     |
-                         +-------+-------+
-                                 |
-                                 v
-                         +---------------+
-                         |   LangGraph   |
-                         |     Agent     |
-                         +-------+-------+
-                                 |
-                                 v
-                      +---------------------+
-                      | Safety / Guardrails |
-                      +----------+----------+
-                                 |
-                                 v
-                      +-------------------+
-                      |   Query Router    |
-                      +----+---------+----+
-                           |         |
-                    Policy |         | General
-                           |         |
-                           v         v
-                    +-----------+ +--------+
-                    |  ChromaDB | | no_tool|
-                    +-----+-----+ +--------+
-                          |
-                          v
-                  +---------------+
-                  | Relevance     |
-                  | Threshold     |
-                  +-------+-------+
-                          |
-                          v
-                    +-----------+
-                    |  Groq LLM |
-                    +-----+-----+
-                          |
-                          v
-                  +---------------+
-                  | Answer +      |
-                  | Sources       |
-                  +-------+-------+
-                          |
-              +-----------+-----------+
-              |           |           |
-              v           v           v
-        Checkpoint      Audit      Metrics
-              |           |           |
-              +-----------+-----------+
-                          |
-                          v
-                  +---------------+
-                  |  Monitoring   |
-                  |   Dashboard   |
-                  +---------------+
-42. Project Completion Summary
+```
+
+## Production Docker Verification
+
+```text
+Docker build:       PASSED
+Container startup:  PASSED
+Container health:   HEALTHY
+/health:             HEALTHY
+/ready:              READY
+/chat:               VERIFIED
+/metrics:            VERIFIED
+```
+
+## Live Request Metrics
+
+```text
+Chat latency:       7,526 ms
+Retrieval latency:  4,357 ms
+LLM latency:        2,370 ms
+
+Prompt tokens:      433
+Completion tokens:  395
+Total tokens:       828
+
+Estimated cost:     $0.000151
+Error rate:         0%
+```
+
+---
+
+# 44. Production Completion Summary
 
 The completed Company Policy Agent demonstrates:
 
+```text
 RAG
 +
 Query Routing
@@ -1393,20 +1933,67 @@ Audit Trail
 +
 Safety Guardrails
 +
-Prompt Injection Evaluation
+Prompt-Injection Evaluation
 +
-Monitoring
+Runtime Monitoring
 +
-Cost Tracking
+Token and Cost Tracking
 +
 Automated Evaluation
 +
 CI Quality Gates
 +
-Dependency Security Checks
+Dependency Security Review
 +
 Docker Deployment
 +
-Health and Readiness Checks
+Health Checks
++
+Readiness Checks
 +
 Production Logging
++
+Live End-to-End Verification
+```
+
+The project is designed to demonstrate the engineering practices required to move an AI agent beyond a prototype and toward a production-oriented system.
+
+---
+
+# 45. Final Status
+
+The production-hardening work is complete.
+
+The final system has been verified at three levels:
+
+### Code quality
+
+```text
+Ruff
+Pytest
+pip check
+```
+
+### AI quality
+
+```text
+RAG evaluation
+Routing evaluation
+Prompt-injection evaluation
+Latency and cost evaluation
+```
+
+### Runtime
+
+```text
+Docker
+Health
+Readiness
+Live /chat request
+Runtime metrics
+Git verification
+```
+
+Known limitations and security findings are documented rather than hidden.
+
+The repository's final production state is intended to be reproducible, testable, observable, and reviewable.
