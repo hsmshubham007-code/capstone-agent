@@ -205,11 +205,11 @@ The current performance risk is primarily **LLM/provider latency**, rather than 
 | T31 | Verify Docker deployment | Should | 1 hr | Done | Running container |
 | T32 | Document architecture | Should | 2 hrs | Done | README / architecture documentation |
 | T33 | Document results and limitations | Should | 2 hrs | Done | Results documentation |
-| T34 | Verify end-to-end production flow | Must | 1 hr | In Progress | Real-data run with guardrails and audit logging |
+| T34 | Verify end-to-end production flow | Must | 1 hr | Done | Real-data safe request, risky-action approval gate, and audit logging verified |
 | T35 | Build one-command evaluation suite | Must | 2 hrs | Done | Routing, retrieval, and prompt-injection evaluations run through one command with a 90% CI-ready gate |
 | T36 | Add evaluation pass-rate CI gate | Must | 2 hrs | Done | Build fails on evaluation regression |
 | T37 | Raise and review production PR | Must | 1 hr | Done | Reviewed PR with comments resolved |
-| T38 | Record final evaluation results | Should | 1 hr | Done | Baseline and regression results |
+| T38 | Record final evaluation results | Should | 1 hr | Done | Final baseline: routing 100%, retrieval Top-2 100%, prompt injection 100%, P50 708ms, P95 6.98s; latency limitation documented |
 | T39 | Investigate LLM/provider tail latency | Should | 2 hr | Done
 | T40 | Separate cold-start/warm-request latency | Should | 1 hr | Done
 | T41 | Resolve Chroma security advisories | Should | 2 hrs | Done | Chroma 1.5.9 is latest available release; pip-audit reports 5 findings with no fix versions; tracked pending upstream fix |
