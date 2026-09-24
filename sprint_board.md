@@ -212,7 +212,7 @@ The current performance risk is primarily **LLM/provider latency**, rather than 
 | T38 | Record final evaluation results | Should | 1 hr | Done | Baseline and regression results |
 | T39 | Investigate LLM/provider tail latency | Should | 2 hr | Done
 | T40 | Separate cold-start/warm-request latency | Should | 1 hr | Done
-| T41 | Resolve Chroma security advisories | Should | 2 hrs | In Progress | Verify fixed Chroma release, upgrade safely, rebuild index, rerun tests/evals and pip-audit |
+| T41 | Resolve Chroma security advisories | Should | 2 hrs | Done | Chroma 1.5.9 is latest available release; pip-audit reports 5 findings with no fix versions; tracked pending upstream fix |
 
 ---
 
