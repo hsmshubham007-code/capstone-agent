@@ -29,7 +29,6 @@ def router_node(
     )
 
     duration = time.perf_counter() - start
-
     request_id = state.get("request_id")
 
     if request_id:
@@ -72,7 +71,7 @@ def approval_node(
 
     if tool_name == "update_employee_record":
         employee_match = re.search(
-            r"employee\s+(EMP\d+)",
+            r"\bemployee(?:\s+record)?\s+(?:ID\s*)?(EMP-?\d+|\d+)\b",
             question,
             re.IGNORECASE,
         )
@@ -93,8 +92,15 @@ def approval_node(
                 "Could not identify new salary."
             )
 
+        employee_id = employee_match.group(1).upper()
+
+        if employee_id.isdigit():
+            employee_id = f"EMP{employee_id}"
+
+        employee_id = employee_id.replace("EMP-", "EMP")
+
         arguments = {
-            "employee_id": employee_match.group(1),
+            "employee_id": employee_id,
             "field": "salary",
             "new_value": int(
                 salary_match.group(1)
@@ -107,7 +113,7 @@ def approval_node(
 
     elif tool_name == "delete_employee_record":
         employee_match = re.search(
-            r"employee\s+(EMP\d+)",
+            r"\bemployee(?:\s+record)?\s+(?:ID\s*)?(EMP-?\d+|\d+)\b",
             question,
             re.IGNORECASE,
         )
@@ -117,8 +123,15 @@ def approval_node(
                 "Could not identify employee ID."
             )
 
+        employee_id = employee_match.group(1).upper()
+
+        if employee_id.isdigit():
+            employee_id = f"EMP{employee_id}"
+
+        employee_id = employee_id.replace("EMP-", "EMP")
+
         arguments = {
-            "employee_id": employee_match.group(1),
+            "employee_id": employee_id,
         }
 
     # -------------------------------------------------
@@ -330,7 +343,6 @@ builder.add_edge(
     "no_tool",
     END,
 )
-
 
 graph = builder.compile(
     checkpointer=checkpointer,
