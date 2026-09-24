@@ -208,8 +208,8 @@ The current performance risk is primarily **LLM/provider latency**, rather than 
 | T34 | Verify end-to-end production flow | Must | 1 hr | In Progress | Real-data run with guardrails and audit logging |
 | T35 | Build one-command evaluation suite | Must | 2 hrs | Done | Routing, retrieval, and prompt-injection evaluations run through one command with a 90% CI-ready gate |
 | T36 | Add evaluation pass-rate CI gate | Must | 2 hrs | Done | Build fails on evaluation regression |
-| T37 | Raise and review production PR | Must | 1 hr | Not Started | Reviewed PR with comments resolved |
-| T38 | Record final evaluation results | Should | 1 hr | Not Started | Baseline and regression results |
+| T37 | Raise and review production PR | Must | 1 hr | Done | Reviewed PR with comments resolved |
+| T38 | Record final evaluation results | Should | 1 hr | Done | Baseline and regression results |
 | T39 | Investigate LLM/provider tail latency | Should | 2 hr | Done
 | T40 | Separate cold-start/warm-request latency | Should | 1 hr | Done
 
