@@ -34,19 +34,20 @@ The goal is not simply to demonstrate an LLM application, but to demonstrate how
 
 ---
 
-## 2. Architecture
+
+## 2.  Architecture
 
 ```text
                          ┌──────────────────────┐
-                         │      Client/UI       │
+                         │      Client / UI     │
                          │   Streamlit / API    │
                          └──────────┬───────────┘
                                     │
                                     ▼
                          ┌──────────────────────┐
-                         │     FastAPI API      │
-                         │ /health /ready       │
-                         │ /metrics /chat       │
+                         │      FastAPI API     │
+                         │ /chat /health /ready │
+                         │      /metrics        │
                          └──────────┬───────────┘
                                     │
                                     ▼
@@ -55,46 +56,42 @@ The goal is not simply to demonstrate an LLM application, but to demonstrate how
                          │    Agent Workflow    │
                          └──────────┬───────────┘
                                     │
-                    ┌───────────────┼───────────────┐
-                    │               │               │
-                    ▼               ▼               ▼
-             ┌────────────┐  ┌────────────┐  ┌─────────────┐
-             │   Router   │  │   Safety   │  │ Checkpoint  │
-             │            │  │ Guardrails │  │   Storage   │
-             └─────┬──────┘  └────────────┘  └─────────────┘
-                   │
-          ┌────────┴─────────┐
-          │                  │
-          ▼                  ▼
- ┌────────────────┐  ┌──────────────────┐
- │ search_documents│  │ Risky operations │
- │      Tool       │  │  Approval Gate   │
- └───────┬─────────┘  └────────┬─────────┘
-         │                     │
-         ▼                     ▼
- ┌────────────────┐     ┌───────────────┐
- │     Chroma     │     │ Human Approval│
- │  Vector Store  │     │     Queue     │
- └───────┬────────┘     └───────────────┘
+                 ┌──────────────────┼──────────────────┐
+                 │                  │                  │
+                 ▼                  ▼                  ▼
+           ┌───────────┐     ┌────────────┐     ┌─────────────┐
+           │  Router   │     │   Safety   │     │ Checkpoints │
+           └─────┬─────┘     │ Guardrails │     └─────────────┘
+                 │           └────────────┘
+          ┌──────┴──────┐
+          │             │
+          ▼             ▼
+ ┌────────────────┐ ┌──────────────────┐
+ │search_documents│ │ Risky Operations │
+ │      Tool      │ │  Approval Gate   │
+ └───────┬────────┘ └────────┬─────────┘
+         │                   │
+         ▼                   ▼
+ ┌────────────────┐   ┌─────────────────┐
+ │     Chroma     │   │ Human Approval  │
+ │  Vector Store  │   │      Queue      │
+ └───────┬────────┘   └─────────────────┘
          │
          ▼
- ┌────────────────────────────┐
- │ Hugging Face Embeddings    │
- │ all-MiniLM-L6-v2           │
- └────────────────────────────┘
+ ┌────────────────────────┐
+ │ Hugging Face Embeddings│
+ │ all-MiniLM-L6-v2       │
+ └────────────────────────┘
 
-                 ┌──────────────────────┐
-                 │       Groq LLM       │
-                 │ OpenAI-compatible API│
-                 └──────────────────────┘
+         ┌──────────────────────┐
+         │       Groq LLM       │
+         │ OpenAI-compatible API│
+         └──────────────────────┘
 
-                 ┌──────────────────────┐
-                 │ Audit + Metrics      │
-                 │ Evaluation + Tracing │
-                 └──────────────────────┘
-```
-
----
+         ┌──────────────────────┐
+         │ Audit + Metrics      │
+         │ Evaluation + Tracing │
+         └──────────────────────┘
 
 ## 3. Core Components
 
