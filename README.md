@@ -1014,19 +1014,13 @@ These artifacts provide evidence for:
 
 ## 28. Production Limitations
 
-The current system has several limitations.
+The current system has several known limitations.
 
 ### Evaluation Size
 
-The routing evaluation contains 32 cases, while the dedicated retrieval and injection benchmarks remain relatively small.
+The routing evaluation contains 32 cases, while the retrieval and injection benchmarks remain relatively small.
 
-A 100% benchmark result should not be interpreted as statistical proof of perfect production quality.
-
-### Keyword-Based Evaluation
-
-Some evaluation checks use expected keywords or structured rules.
-
-This can produce false positives when expected terms appear without sufficient semantic correctness.
+A 100% benchmark result should not be interpreted as proof of perfect production quality.
 
 ### Prompt-Injection Coverage
 
@@ -1044,25 +1038,26 @@ Cold-start behavior is therefore reported separately.
 
 LLM latency depends on provider response time, network conditions, traffic, and rate limits.
 
+### Approval State
+
+The current approval queue is process-local and stored in memory.
+
+This means pending approvals are not durable across application restarts and are not automatically shared between multiple application processes or replicas.
+
+A production-scale deployment would require persistent approval storage and an API-level approval workflow.
+
 ### Cost Projections
 
-Projected monthly costs are estimates based on documented assumptions.
-
-Actual billing can differ.
-
-### Retrieval Dependence
-
-Answer quality depends on retrieval quality and the underlying document corpus.
-
-Changes to the document corpus should trigger retrieval and evaluation checks.
+Cost projections are estimates based on documented token usage, routing assumptions, and provider pricing. Actual costs can vary with traffic, model selection, token usage, retries, and provider pricing.
 
 ### Dependency Security
 
-The current ChromaDB dependency has documented security advisories.
+`pip-audit` currently reports security advisories for the installed ChromaDB dependency.
 
-The project documents this as an explicit dependency exception rather than hiding the finding.
+The application uses ChromaDB as local persistent storage rather than exposing ChromaDB as a standalone network service. The dependency finding is documented separately in `SECURITY.md` and should be re-evaluated when an appropriate patched release becomes available.
 
 ---
+
 
 ## 29. Production Hardening Status
 
@@ -1204,4 +1199,5 @@ Tests:                     41 passed
 Ruff:                      Passed
 ```
 
-The system is production-hardened for the current project scope, while the documented limitations identify where additional evaluation, security testing, and operational evidence are required before treating the system as a large-scale production service.
+The system has completed the major production-hardening work for the current project scope. The documented limitations identify the remaining areas requiring additional evaluation, persistent approval infrastructure, security testing, and operational evidence before large-scale production deployment.
+
