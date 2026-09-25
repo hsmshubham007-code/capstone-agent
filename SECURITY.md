@@ -149,3 +149,19 @@ should:
 8. Verify `/chat`.
 9. Re-run `pip-audit`.
 10. Rebuild and test the Docker image.
+
+## Dependency Security Audit
+
+The CI pipeline runs `pip-audit` to identify known vulnerabilities
+in project dependencies.
+
+Some findings have been reported for the currently installed
+ChromaDB dependency. The audit is temporarily configured as
+non-blocking while these findings are investigated.
+
+This exception does not mean the dependency is vulnerability-free.
+The findings must be reviewed, and a compatible remediation should
+be evaluated before the exception is removed.
+
+Review the latest CI security-audit output before changing the
+dependency version.
