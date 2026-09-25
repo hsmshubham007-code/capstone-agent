@@ -8,7 +8,8 @@ class Metrics:
 
         self.counters = defaultdict(int)
 
-        # General HTTP latency.
+        # General latency is now HTTP-only.
+        # Keep the existing attribute name for compatibility.
         self.latencies = []
 
         # Chat-specific latency.
@@ -47,6 +48,13 @@ class Metrics:
     # =========================================================
 
     def observe_latency(self, value):
+        """
+        Record HTTP request latency.
+
+        This method retains its existing name so the API
+        middleware and existing tests remain compatible.
+        LLM latency must be recorded with observe_llm_latency().
+        """
         with self._lock:
             self.latencies.append(value)
             self._trim(self.latencies)
@@ -175,7 +183,9 @@ class Metrics:
 
     def snapshot(self):
         with self._lock:
-            latency_values = list(
+            # Copy the lists while holding the lock so the
+            # snapshot uses a consistent view of the metrics.
+            http_latency_values = list(
                 self.latencies
             )
 
@@ -214,14 +224,23 @@ class Metrics:
                 else 0
             )
 
+            # Calculate the HTTP summary once and expose it
+            # under both names for backward compatibility.
+            http_latency_summary = self._latency_summary(
+                http_latency_values
+            )
+
             return {
                 "counters": dict(
                     self.counters
                 ),
 
-                "latency": self._latency_summary(
-                    latency_values
-                ),
+                # Explicit name for HTTP request latency.
+                "http_latency": http_latency_summary,
+
+                # Backward-compatible alias.
+                # This now contains HTTP latency only.
+                "latency": http_latency_summary,
 
                 "chat_latency": self._latency_summary(
                     chat_latency_values
@@ -246,8 +265,8 @@ class Metrics:
 
                 "cost": {
                     "total_usd": round(
-                       self.cost["total_usd"],
-                       6,
+                        self.cost["total_usd"],
+                        6,
                     ),
                     "requests_with_cost": self.cost[
                         "requests_with_cost"

@@ -435,10 +435,8 @@ Answer:
         # Metrics
         # -------------------------------------------------
 
-        metrics.observe_latency(
-            latency_ms
-        )
-
+        # LLM duration is recorded only in llm_latency.
+        # It must not be added to the HTTP latency metric.
         metrics.observe_llm_latency(
             latency_ms
         )
@@ -542,10 +540,8 @@ Answer:
             "llm_errors_total"
         )
 
-        metrics.observe_latency(
-            latency_ms
-        )
-
+        # Failed LLM calls are also recorded only in
+        # llm_latency, not in HTTP latency.
         metrics.observe_llm_latency(
             latency_ms
         )
