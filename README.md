@@ -1,136 +1,126 @@
 # Company Policy Agent
 
-Production-oriented RAG agent for answering company-policy questions using local document retrieval, Groq-hosted LLMs, LangGraph orchestration, durable checkpointing, safety guardrails, approval workflows, audit logging, evaluation gates, monitoring, and Docker deployment.
+Production-oriented RAG agent for answering company-policy questions using local document retrieval, Groq-hosted LLMs, LangGraph orchestration, durable checkpointing, safety guardrails, human approval workflows, audit logging, monitoring, automated evaluation, CI quality gates, and Docker deployment.
+
+---
 
 ## 1. Project Overview
 
-The Company Policy Agent is an end-to-end AI application designed to answer questions from internal company policy documents.
+The Company Policy Agent is a production-oriented AI system designed to answer questions from internal company-policy documents while maintaining clear safety, approval, audit, evaluation, and operational boundaries.
 
 The system combines:
 
-* RAG over company policy PDFs
-* Local Hugging Face embeddings
-* Chroma vector storage
+* Local document retrieval with Chroma
+* Hugging Face sentence-transformer embeddings
 * Groq-hosted OpenAI-compatible LLMs
 * LangGraph agent orchestration
 * Durable conversation checkpointing
 * Tool routing
-* Safety and prompt-injection guardrails
+* Prompt-injection guardrails
+* Input and output validation
 * Human approval for risky actions
 * Audit logging
-* Production API endpoints
-* Runtime metrics
+* FastAPI production endpoints
+* Streamlit user interface
+* Latency and cost instrumentation
 * Automated evaluation
-* Injection-resistance evaluation
+* Retrieval evaluation
+* Prompt-injection evaluation
 * CI quality gates
 * Docker deployment
+* LangSmith tracing support
 
-The goal is not simply to demonstrate an LLM application, but to demonstrate a production-oriented AI system with measurable quality, safety, observability, and deployment controls.
+The goal is not simply to demonstrate an LLM application, but to demonstrate how an AI agent can be engineered with production-oriented controls and measurable evaluation evidence.
 
 ---
 
-# 2. Architecture
+## 2. Architecture
 
 ```text
                          ┌──────────────────────┐
                          │      Client/UI       │
-                         │    Streamlit/API     │
+                         │   Streamlit / API    │
                          └──────────┬───────────┘
                                     │
                                     ▼
                          ┌──────────────────────┐
-                         │      FastAPI API     │
+                         │     FastAPI API      │
                          │ /health /ready       │
                          │ /metrics /chat       │
                          └──────────┬───────────┘
                                     │
                                     ▼
                          ┌──────────────────────┐
-                         │     LangGraph        │
-                         │   Agent Workflow     │
+                         │      LangGraph       │
+                         │    Agent Workflow    │
                          └──────────┬───────────┘
                                     │
-                     ┌──────────────┼──────────────┐
-                     │              │              │
-                     ▼              ▼              ▼
-              ┌────────────┐ ┌────────────┐ ┌─────────────┐
-              │   Router   │ │   Safety   │ │ Checkpoint  │
-              │            │ │ Guardrails │ │   Storage   │
-              └─────┬──────┘ └────────────┘ └─────────────┘
-                    │
-          ┌─────────┴─────────┐
-          │                   │
-          ▼                   ▼
- ┌────────────────┐   ┌──────────────────┐
- │ search_documents│   │ Risky operations │
- │      Tool       │   │ Approval Gate    │
- └───────┬────────┘   └────────┬─────────┘
+                    ┌───────────────┼───────────────┐
+                    │               │               │
+                    ▼               ▼               ▼
+             ┌────────────┐  ┌────────────┐  ┌─────────────┐
+             │   Router   │  │   Safety   │  │ Checkpoint  │
+             │            │  │ Guardrails │  │   Storage   │
+             └─────┬──────┘  └────────────┘  └─────────────┘
+                   │
+          ┌────────┴─────────┐
+          │                  │
+          ▼                  ▼
+ ┌────────────────┐  ┌──────────────────┐
+ │ search_documents│  │ Risky operations │
+ │      Tool       │  │  Approval Gate   │
+ └───────┬─────────┘  └────────┬─────────┘
          │                     │
          ▼                     ▼
  ┌────────────────┐     ┌───────────────┐
- │    Chroma      │     │ Human Approval│
- │ Vector Store   │     │ Queue         │
+ │     Chroma     │     │ Human Approval│
+ │  Vector Store  │     │     Queue     │
  └───────┬────────┘     └───────────────┘
          │
          ▼
  ┌────────────────────────────┐
- │ Local HF Embeddings        │
+ │ Hugging Face Embeddings    │
  │ all-MiniLM-L6-v2           │
  └────────────────────────────┘
 
-                    ┌──────────────────────┐
-                    │      Groq LLM        │
-                    │ OpenAI-compatible API│
-                    └──────────────────────┘
+                 ┌──────────────────────┐
+                 │       Groq LLM       │
+                 │ OpenAI-compatible API│
+                 └──────────────────────┘
 
-                    ┌──────────────────────┐
-                    │ Audit + Metrics      │
-                    │ Evaluation + Tracing │
-                    └──────────────────────┘
+                 ┌──────────────────────┐
+                 │ Audit + Metrics      │
+                 │ Evaluation + Tracing │
+                 └──────────────────────┘
 ```
 
 ---
 
-# 3. Main Components
+## 3. Core Components
 
-## API
-
-FastAPI provides:
-
-* `GET /health`
-* `GET /ready`
-* `GET /metrics`
-* `POST /chat`
-* `GET /checkpoint/{thread_id}`
-
-The API exposes request IDs, thread IDs, answers, sources, tools used, and execution traces.
-
-## Agent
+### LangGraph
 
 LangGraph manages the agent workflow and durable state.
 
 The state includes information such as:
 
-* request ID
-* session ID
+* session/thread information
 * question
 * conversation history
 * selected tool
 * answer
 * sources
 * tools used
-* retrieval metadata
-* approval status
-* LLM metadata
-* execution trace
+* trace information
 
-## Router
+### Router
 
 The router determines whether a request should:
 
 * search company documents
 * perform a risky employee operation
 * return without using a tool
+* invoke a safety or guardrail path
 
 The `search_documents` tool does not require approval.
 
@@ -138,7 +128,7 @@ Risky operations are routed through the approval workflow.
 
 ---
 
-# 4. RAG Pipeline
+## 4. Document Corpus
 
 The current policy corpus contains:
 
@@ -149,68 +139,57 @@ data/
 └── it_policy.pdf
 ```
 
-The ingestion pipeline:
+The documents provide the source material used by the RAG system.
 
-1. Loads PDF documents.
-2. Preserves source metadata.
-3. Splits documents into chunks.
-4. Generates local embeddings.
-5. Stores vectors in Chroma.
+---
 
-Current configuration:
+## 5. Retrieval Configuration
+
+The application uses local embeddings rather than a hosted embedding API.
+
+### Embedding model
 
 ```text
-Embedding model:
+sentence-transformers/all-MiniLM-L6-v2
+```
+
+### Current production retrieval configuration
+
+```text
+Embedding:
 sentence-transformers/all-MiniLM-L6-v2
 
 Chunk size:
 800
 
 Chunk overlap:
-120
+150
+
+Top-K:
+2
+
+Maximum retrieval distance:
+1.10
 
 Chroma collection:
 capstone_documents
-
-Storage:
-storage/chroma
 ```
-
-The latest clean ingestion produced:
-
-```text
-21 PDF pages
-39 chunks
-```
-
-The system uses local embeddings rather than a hosted embedding API.
-
----
-
-# 5. Retrieval
 
 The retrieval layer uses Chroma similarity search with local Hugging Face embeddings.
 
-The retrieval system includes query expansion for policy questions involving areas such as:
+The retrieval implementation also supports query expansion for policy-related terminology.
 
-* working hours
-* time off
-* company information
-* company mission
-
-The retrieval quality investigation was completed before final productionization.
-
-The investigation compared retrieval behavior and confirmed that the current chunking and embedding configuration provided better results than the tested section-aware alternative.
-
-The retrieval threshold is intentionally kept as part of the current production configuration rather than being changed solely to improve a small evaluation set.
+The retrieval threshold is intentionally maintained as part of the production configuration rather than being changed solely to optimize a small benchmark.
 
 ---
 
-# 6. LLM Configuration
+## 6. LLM Configuration
 
-The application uses Groq as the API provider through its OpenAI-compatible API.
+The application uses the Groq OpenAI-compatible endpoint:
 
-The application does **not** require a direct OpenAI API key.
+```text
+https://api.groq.com/openai/v1
+```
 
 Primary model configuration:
 
@@ -220,15 +199,13 @@ GROQ_LARGE_MODEL=openai/gpt-oss-120b
 GROQ_SAFETY_MODEL=openai/gpt-oss-safeguard-20b
 ```
 
-The application uses the Groq OpenAI-compatible endpoint.
-
-The production routing design supports a small-model-first strategy with escalation to the larger model when required.
+The application does not require a direct OpenAI API connection for LLM inference.
 
 ---
 
-# 7. Model Routing
+## 7. Model Routing
 
-The production design uses:
+The production design supports a small-model-first strategy.
 
 ```text
 User request
@@ -236,382 +213,22 @@ User request
      ▼
 Small model
      │
-     ├── Success ──────────► Return result
+     ├── Success ──► Return result
      │
      └── Failure / escalation
-                │
-                ▼
-          Large model
+                 │
+                 ▼
+           Large model
 ```
 
 The objective is to avoid sending every request to the larger model.
 
-Cost projections for routing are maintained separately from measured evaluation costs.
+A separate cost model estimates the effect of this routing strategy.
 
----
-
-# 8. Safety
-
-The application includes multiple safety layers.
-
-## Input validation
-
-Inputs are checked before agent execution.
-
-## Prompt-injection detection
-
-The application detects common attempts to override system instructions or bypass policy controls.
-
-Examples evaluated include:
-
-* direct instruction override
-* role override
-* policy bypass
-* instruction override
-* system prompt extraction
-
-## Output validation
-
-Generated output is checked before being returned to the client.
-
-## Risky tool protection
-
-Risky operations include:
-
-* `update_employee_record`
-* `delete_employee_record`
-* `send_email`
-
-These operations require explicit approval.
-
----
-
-# 9. Human Approval Workflow
-
-Risky actions follow:
+Under the documented assumptions:
 
 ```text
-User request
-     │
-     ▼
-Risky tool detected
-     │
-     ▼
-Approval required
-     │
-     ├── REJECTED ──► Action blocked
-     │
-     ├── PENDING ───► Action blocked
-     │
-     └── APPROVED ──► Execute action
-                           │
-                           ▼
-                       EXECUTED
-```
-
-Approval tests cover:
-
-* pending requests
-* rejected requests
-* approved requests
-* execution after approval
-* safety behavior
-
-This prevents high-impact tools from executing directly from an LLM decision.
-
----
-
-# 10. Audit Logging
-
-Tool calls are recorded using request IDs and audit metadata.
-
-The audit system provides traceability for:
-
-* request ID
-* tool name
-* operation
-* success/failure
-* relevant metadata
-
-Audit artifacts are intentionally excluded from source control when appropriate.
-
-For example:
-
-```gitignore
-audit.json
-```
-
----
-
-# 11. Durable Checkpointing
-
-LangGraph durable checkpointing is implemented for conversation state.
-
-Each conversation uses a thread ID.
-
-The API and UI use the thread ID to resume conversation state.
-
-Checkpoint storage is persisted separately from the application container.
-
-This allows the application to restart without losing durable conversation state.
-
----
-
-# 12. Monitoring
-
-The application exposes runtime metrics through:
-
-```text
-GET /metrics
-```
-
-Metrics include:
-
-* total requests
-* successful requests
-* LLM requests
-* successful LLM requests
-* chat requests
-* tool-using requests
-* retrieval requests
-* latency
-* chat latency
-* retrieval latency
-* LLM latency
-* error rate
-* token usage
-* estimated LLM cost
-
-Example production measurements from a recent run included:
-
-```text
-LLM requests:              2
-LLM prompt tokens:       866
-LLM completion tokens:   790
-LLM total tokens:       1656
-```
-
-The monitoring layer was verified using real API requests.
-
----
-
-# 13. Health and Readiness
-
-The application exposes:
-
-```text
-GET /health
-GET /ready
-```
-
-Health verifies that the service is running.
-
-Readiness verifies important production dependencies such as:
-
-* Groq API configuration
-* model configuration
-* Chroma storage
-* checkpoint storage
-
-Example successful readiness state:
-
-```text
-ready
-```
-
-with all required dependencies reported as available.
-
----
-
-# 14. Docker Deployment
-
-The production container uses:
-
-```text
-python:3.12-slim
-```
-
-The container starts FastAPI using Uvicorn:
-
-```text
-uvicorn app.api:app --host 0.0.0.0 --port 8000
-```
-
-Docker Compose exposes:
-
-```text
-localhost:8000
-```
-
-Persistent storage includes:
-
-```text
-./storage/chroma:/app/storage/chroma
-checkpoint_data:/app/storage/checkpoints
-```
-
-The service includes a Docker health check against:
-
-```text
-/health
-```
-
-The production container was successfully started and reported healthy.
-
----
-
-# 15. Evaluation Dataset
-
-The main evaluation set currently contains 5 cases:
-
-| ID               | Category     | Purpose                         |
-| ---------------- | ------------ | ------------------------------- |
-| hr_001           | HR           | Professional conduct            |
-| hr_002           | HR           | Workplace harassment            |
-| company_001      | Company      | Policy violation                |
-| it_001           | IT           | Information protection          |
-| out_of_scope_001 | Out-of-scope | Unsupported stock-price request |
-
-The evaluation checks:
-
-* answer correctness
-* expected keywords
-* source correctness
-* completion
-* latency
-* retrieval behavior
-* cost
-
-The evaluation dataset is intentionally small at this stage and should grow as production traces become available.
-
----
-
-# 16. Latest Evaluation Results
-
-The latest production evaluation completed successfully.
-
-```text
-Total cases:       5
-Passed:            5
-Failed:            0
-Errors:            0
-Completion rate:   100%
-Pass rate:         100%
-```
-
-## Category Results
-
-| Category     | Passed | Total | Pass Rate |
-| ------------ | -----: | ----: | --------: |
-| HR           |      2 |     2 |      100% |
-| Company      |      1 |     1 |      100% |
-| IT           |      1 |     1 |      100% |
-| Out-of-scope |      1 |     1 |      100% |
-
-The evaluation gate now reads the evaluator's `category_stats` field directly and verifies each category independently.
-
----
-
-# 17. Retrieval Evaluation
-
-Latest retrieval results:
-
-| Metric                              | Result |
-| ----------------------------------- | -----: |
-| Source hit rate                     |   100% |
-| In-scope retrieval success          |   100% |
-| In-scope cases with evidence        |    4/4 |
-| Out-of-scope no-evidence rate       |   100% |
-| Out-of-scope cases with no evidence |    1/1 |
-| Average documents retrieved         |   3.00 |
-| Average retrieval distance          | 0.8194 |
-
-The latest evaluation therefore produced evidence for all four in-scope cases and correctly produced no evidence for the out-of-scope case.
-
----
-
-# 18. Latency Evaluation
-
-Latency is measured separately for cold-start and warm requests.
-
-Latest results:
-
-| Metric                  |       Result |
-| ----------------------- | -----------: |
-| Cold-start latency      | 31,171.76 ms |
-| Overall average latency |  6,841.10 ms |
-| Overall P50             |  1,006.61 ms |
-| Overall P95             | 25,156.06 ms |
-| Warm average            |    758.43 ms |
-| Warm P50                |    950.93 ms |
-| Warm P95                |  1,080.27 ms |
-
-The large cold-start value is primarily associated with local embedding-model initialization.
-
-For production gating, the system uses **warm P95 latency** rather than treating the one-time initialization event as representative steady-state request latency.
-
-The current latency gate is:
-
-```text
-Maximum warm P95:
-20,000 ms
-```
-
-Latest warm P95:
-
-```text
-1,080.27 ms
-```
-
-Therefore the latency gate passes.
-
-Cold-start latency remains reported separately so that startup behavior is not hidden.
-
----
-
-# 19. Cost Evaluation
-
-Latest measured evaluation usage:
-
-| Metric                    |      Result |
-| ------------------------- | ----------: |
-| Average prompt tokens     |      470.75 |
-| Average completion tokens |      337.00 |
-| Average reasoning tokens  |      201.75 |
-| Average total tokens      |      807.75 |
-| Average cost/query        | $0.00013641 |
-| Total evaluation cost     | $0.00054562 |
-
-Projected cost using the measured average cost/query:
-
-| Query volume | Projected cost |
-| -----------: | -------------: |
-|        1,000 |        $0.1364 |
-|       10,000 |        $1.3640 |
-|      100,000 |       $13.6405 |
-
-These are estimates, not billing guarantees.
-
-Actual production cost can change based on:
-
-* token usage
-* model selection
-* routing behavior
-* provider pricing
-* request distribution
-* retries
-* traffic volume
-
----
-
-# 20. Model-Routing Cost Projection
-
-A separate routing model is maintained for planning.
-
-The routing assumptions include:
-
-```text
-Base volume:
+Base monthly volume:
 10,000 queries
 
 Projected volume:
@@ -623,148 +240,498 @@ Prompt tokens/query:
 Completion tokens/query:
 300
 
-Large-model routing:
+Large-model fraction:
 10%
 ```
 
-The modeled routing cost is approximately:
+The modeled routed cost is approximately:
 
 ```text
-Small model:
-$0.000165/query
+10,000 queries/month:
+$1.815
 
-Large model:
-$0.000330/query
-
-Modeled routed cost:
-$0.0001815/query
+100,000 queries/month:
+$18.15
 ```
 
-The routing model estimates approximately 45% savings versus routing every request to the larger model under those assumptions.
+The model estimates approximately 45% lower cost than routing every request to the larger model under those assumptions.
 
-This is a **modeled projection**, not the same as the measured evaluation cost.
+These figures are projections rather than guaranteed production billing.
 
 ---
 
-# 21. Injection-Resistance Evaluation
+## 8. Safety and Human Approval
 
-The injection evaluation currently contains 5 adversarial cases.
+The application includes multiple safety layers.
+
+### Input Validation
+
+Inputs are checked before agent execution.
+
+### Prompt-Injection Detection
+
+The application detects common attempts to override system instructions or bypass policy controls.
+
+The injection evaluation covers cases such as:
+
+* direct instruction override
+* role override
+* instruction override
+* system prompt extraction
+
+### Output Validation
+
+Generated output is checked before being returned to the client.
+
+### Risky Tool Protection
+
+Risky operations include:
+
+* updating employee records
+* deleting employee information
+* sending sensitive emails or communications
+* other defined destructive operations
+
+These operations require explicit human approval.
+
+The approval lifecycle is:
+
+```text
+PENDING
+   │
+   ├── REJECTED
+   │
+   └── APPROVED
+          │
+          ▼
+       EXECUTED
+```
+
+The AI system can prepare or request an action, but defined high-risk actions remain subject to human authorization.
+
+---
+
+## 9. Audit Logging
+
+The application records audit information for important tool and approval operations.
+
+Audit records can include:
+
+* request ID
+* tool name
+* arguments
+* status
+* outcome
+* errors
+* execution status
+* relevant metadata
+
+Runtime audit artifacts are excluded from source control where appropriate.
+
+The project uses `audit.json` for runtime audit information and excludes it through `.gitignore`.
+
+---
+
+## 10. Durable Checkpointing
+
+LangGraph durable checkpointing is implemented for conversation state.
+
+Each conversation uses a thread ID.
+
+Checkpoint storage is persisted separately from the application container.
+
+This allows the application to restart without losing durable conversation state.
+
+---
+
+## 11. Observability and Metrics
+
+The application records operational metrics including:
+
+* request count
+* error count
+* latency
+* token usage
+* estimated LLM cost
+* tool usage
+* request traces
+
+The application also records detailed timing information for retrieval and LLM calls.
+
+Example instrumentation:
+
+```text
+[RETRIEVAL TIMING]
+db
+search
+filter
+total
+
+[LLM TIMING]
+model
+total
+prompt tokens
+completion tokens
+reasoning tokens
+total tokens
+cost
+```
+
+LangSmith tracing is supported through environment variables.
+
+Example:
+
+```text
+LANGCHAIN_TRACING_V2=true
+LANGCHAIN_PROJECT=week2day5proj1
+LANGCHAIN_ENDPOINT=https://api.smith.langchain.com
+```
+
+---
+
+## 12. API and Health Checks
+
+The production FastAPI service exposes endpoints including:
+
+```text
+GET /health
+GET /ready
+GET /metrics
+POST /chat
+GET /checkpoint/{thread_id}
+```
+
+The health endpoint verifies application availability.
+
+The readiness endpoint verifies important production dependencies such as:
+
+* Groq configuration
+* configured model
+* Chroma storage
+* checkpoint storage
+
+---
+
+## 13. Docker Deployment
+
+The application can be deployed using Docker Compose.
+
+Build and start:
+
+```powershell
+docker compose up --build
+```
+
+The service is exposed on:
+
+```text
+http://localhost:8000
+```
+
+Persistent storage includes:
+
+```text
+storage/chroma
+storage/checkpoints
+```
+
+The Docker service includes a health check against:
+
+```text
+/health
+```
+
+The production deployment has been verified with Docker health and readiness checks.
+
+---
+
+## 14. Evaluation Strategy
+
+The project uses multiple evaluation layers rather than relying on a single benchmark.
+
+The evaluation suite covers:
+
+1. Routing behavior
+2. Retrieval quality
+3. Prompt-injection resistance
+4. Latency
+5. Cost modeling
+6. Automated tests
+7. Dependency checks
+
+This separation makes it possible to distinguish application correctness from retrieval quality, security evidence, and operational performance.
+
+---
+
+## 15. Routing Evaluation
+
+The routing evaluation contains 32 cases.
+
+Categories:
+
+```text
+HR                 8
+Company            6
+IT                 6
+Out-of-scope       5
+Prompt-injection   5
+Approval           2
+```
+
+Latest completed routing evaluation:
+
+```text
+Total cases:       32
+Passed:            32
+Failed:             0
+Errors:             0
+Completion:       100%
+Pass rate:        100%
+```
+
+Category results:
+
+```text
+Approval:          2/2   100%
+Company:           6/6   100%
+HR:                8/8   100%
+IT:                6/6   100%
+Out-of-scope:      5/5   100%
+Prompt-injection:  5/5   100%
+```
+
+The routing evaluation completed without provider infrastructure errors.
+
+This distinction matters because an incomplete evaluation caused by provider rate limits should not be treated as successful evaluation evidence.
+
+---
+
+## 16. Retrieval Evaluation
+
+The dedicated retrieval benchmark contains five cases.
+
+Latest Top-2 results:
+
+```text
+In-scope retrieval:
+4/4 = 100%
+
+Out-of-scope clean:
+1/1 = 100%
+```
+
+Additional retrieval-depth results:
+
+```text
+Top-1 in-scope:
+3/4 = 75%
+
+Top-2 in-scope:
+4/4 = 100%
+
+Top-3 in-scope:
+4/4 = 100%
+```
+
+One IT benchmark query retrieved `company_policy.pdf` at rank 1 and `it_policy.pdf` at rank 2.
+
+The production retrieval configuration therefore uses Top-2 rather than relying only on Top-1 retrieval.
+
+The retrieval benchmark remains small and should be expanded with additional golden cases.
+
+---
+
+## 17. Latency Evaluation
+
+Latency is measured separately for cold-start and warm requests.
+
+The latest routing evaluation should be treated as the current reference run.
+
+```text
+Average latency:
+1,599.54 ms
+
+P50:
+662.41 ms
+
+P95:
+1,295.26 ms
+```
+
+Cold-start behavior:
+
+```text
+Cold-start latency:
+35,348.30 ms
+
+Embedding initialization:
+32,022.36 ms
+
+Chroma initialization:
+32,407.47 ms
+
+Retrieval total:
+33,083.58 ms
+
+LLM latency:
+2,183.32 ms
+```
+
+Warm-request behavior:
+
+```text
+Warm average:
+510.87 ms
+
+Warm P50:
+636.80 ms
+
+Warm maximum:
+1,473.21 ms
+```
+
+The cold-start event is primarily associated with local embedding-model and Chroma initialization.
+
+The API therefore performs retrieval warm-up during application startup.
+
+Cold-start behavior remains separately reported rather than being hidden from the evaluation.
+
+---
+
+## 18. Cost Evaluation
+
+LLM instrumentation records:
+
+* prompt tokens
+* completion tokens
+* reasoning tokens
+* total tokens
+* estimated cost per request
+
+The project also maintains a separate cost projection for model routing.
+
+Under the documented routing assumptions:
+
+```text
+10,000 queries/month:
+approximately $1.815
+
+100,000 queries/month:
+approximately $18.15
+```
+
+These are modeled projections.
+
+Actual production cost can change based on:
+
+* token usage
+* model selection
+* routing behavior
+* provider pricing
+* request distribution
+* retries
+* traffic volume
+
+Measured evaluation cost and modeled monthly cost should therefore be treated as separate metrics.
+
+---
+
+## 19. Prompt-Injection Evaluation
+
+The dedicated injection evaluation contains five adversarial cases.
 
 Latest result:
 
 ```text
-Passed:              5/5
-Injection resistance: 100%
-Errors:              0
+Passed:
+5/5
+
+Failed:
+0
+
+Errors:
+0
+
+Completion rate:
+100%
+
+Resistance rate:
+100%
 ```
 
-Evaluated attack categories include:
+The evaluation includes cases covering:
 
-* direct override
+* direct instruction override
 * role override
-* policy bypass
+* prompt manipulation
 * instruction override
 * system prompt extraction
 
-The CI gate requires:
+The current result provides evidence against the tested cases.
+
+It does not demonstrate that every possible prompt-injection technique is blocked.
+
+A larger continuously growing adversarial dataset is required for stronger security evidence.
+
+---
+
+## 20. Production Evaluation Gates
+
+The project uses explicit evaluation thresholds.
+
+The current operational routing gate includes:
+
+```text
+Minimum overall pass rate:
+90%
+
+Minimum completion rate:
+95%
+
+Minimum category pass rate:
+80%
+
+Maximum configured warm P95 latency:
+20,000 ms
+```
+
+The dedicated injection evaluation uses:
 
 ```text
 Minimum injection resistance:
 90%
 ```
 
-The latest result is:
+The latest routing evaluation produced:
 
 ```text
+Overall pass rate:
+100%
+
+Completion rate:
+100%
+
+Category pass rates:
+100%
+
+Injection resistance:
 100%
 ```
 
----
+The latest evidence therefore satisfies the currently configured evaluation thresholds.
 
-# 22. Production Evaluation Gate
-
-The production gate currently enforces:
-
-| Gate                 |   Threshold | Latest Result |
-| -------------------- | ----------: | ------------: |
-| Overall pass rate    |       ≥ 90% |          100% |
-| Completion rate      |       ≥ 95% |          100% |
-| Category pass rate   |       ≥ 80% |          100% |
-| Warm P95 latency     | ≤ 20,000 ms |   1,080.27 ms |
-| Injection resistance |       ≥ 90% |          100% |
-
-Latest result:
-
-```text
-============================================================
-EVALUATION GATE
-============================================================
-Overall pass rate: 100.00%
-Completion rate: 100.00%
-Warm P95 latency: 1080.27 ms
-
-Category checks:
-  HR: 2/2 passed (100.00%), errors=0
-  Company: 1/1 passed (100.00%), errors=0
-  IT: 1/1 passed (100.00%), errors=0
-  Out-of-scope: 1/1 passed (100.00%), errors=0
-
-Injection resistance: 100.00%
-
-============================================================
-PASS: All evaluation gates satisfied.
-============================================================
-```
+Evaluation completeness is treated separately from benchmark quality so that provider rate-limit or infrastructure errors cannot silently become evaluation failures or successful evidence.
 
 ---
 
-# 23. CI Quality Gates
+## 21. Automated Tests and CI
 
-The project uses GitHub Actions for automated quality checks.
+The project uses automated checks for application correctness and code quality.
 
-CI includes:
-
-1. Dependency installation
-2. Vector-store build
-3. Ruff linting
-4. Pytest
-5. Evaluation gate
-6. Injection-resistance evaluation
-7. Dependency auditing
-
-The project also uses:
+Latest local test run:
 
 ```text
-ruff
-pytest
-pip check
-pip-audit
-```
-
-Local verification:
-
-```text
-Ruff:
-All checks passed!
-
-Pytest:
-40 passed, 1 warning
-
-pip check:
-No broken requirements found.
-
-Evaluation gate:
-PASS
-```
-
----
-
-# 24. Test Suite
-
-The latest local test run:
-
-```text
-40 passed
+41 passed
 1 warning
 ```
 
@@ -774,13 +741,27 @@ The warning originates from a ChromaDB telemetry dependency using the deprecated
 asyncio.iscoroutinefunction
 ```
 
-The warning does not currently cause test failure.
+The warning does not currently cause the test suite to fail.
 
-The project should continue monitoring this dependency as Python evolves.
+Latest Ruff verification:
+
+```text
+All checks passed!
+```
+
+Recommended local checks:
+
+```powershell
+pytest -q
+ruff check app tests evals *.py
+python -m pip check
+```
+
+The project also includes GitHub Actions workflows for automated CI and evaluation checks.
 
 ---
 
-# 25. Dependency Security
+## 22. Dependency Security
 
 Dependency auditing is performed with:
 
@@ -788,11 +769,9 @@ Dependency auditing is performed with:
 pip-audit
 ```
 
-The current ChromaDB version has documented security advisories for which a patched release was not available during the project's security review.
+The current ChromaDB dependency has documented security advisories.
 
-The application uses ChromaDB as local persistent storage rather than exposing a standalone ChromaDB server to untrusted clients.
-
-This reduces the relevant exposure surface but does not eliminate the underlying dependency advisories.
+The project does not expose ChromaDB as a standalone network service. ChromaDB is used as local persistent storage within the application architecture.
 
 The findings and architectural mitigation are documented separately in:
 
@@ -802,109 +781,79 @@ SECURITY.md
 
 The project does not claim that the dependency has no known vulnerabilities.
 
----
-
-# 26. Observability and Tracing
-
-The project supports LangSmith tracing through environment variables.
-
-Example configuration:
-
-```text
-LANGCHAIN_TRACING_V2=true
-LANGCHAIN_PROJECT=week2day5proj1
-LANGCHAIN_ENDPOINT=https://api.smith.langchain.com
-```
-
-Tracing can be used to investigate:
-
-* router decisions
-* tool execution
-* retrieval
-* LLM calls
-* latency
-* failed requests
-* agent execution paths
-
-The application also maintains its own request-level trace information for production observability.
+The dependency should be re-evaluated when an appropriate patched release becomes available.
 
 ---
 
-# 27. Project Structure
+## 23. Project Structure
 
 ```text
 week2day5proj1/
+├── .github/
+│   └── workflows/
+│       ├── ci.yml
+│       └── evaluation.yml
 │
 ├── app/
 │   ├── agent.py
 │   ├── api.py
 │   ├── approval.py
 │   ├── audit.py
+│   ├── async_agent.py
+│   ├── async_tools.py
+│   ├── checkpoint.py
+│   ├── config.py
 │   ├── ingest.py
 │   ├── llm.py
-│   ├── rag.py
-│   ├── retrieval.py
-│   ├── risky_tools.py
+│   ├── metrics.py
 │   ├── router.py
+│   ├── risky_tools.py
 │   ├── safety.py
 │   ├── state.py
-│   ├── tools.py
-│   └── ...
+│   └── tools.py
 │
 ├── data/
 │   ├── hr_policy.pdf
 │   ├── company_policy.pdf
 │   └── it_policy.pdf
 │
+├── docs/
+│
 ├── evals/
+│   ├── charts/
 │   ├── evaluation_dataset.json
 │   ├── evaluation_results.json
 │   ├── injection_results.json
 │   ├── routing_evaluation_results.json
+│   ├── retrieval_evaluation_results.json
 │   ├── cost_projection.json
+│   ├── evaluation_report.json
 │   ├── evaluate.py
 │   ├── evaluate_injection.py
-│   ├── evaluate_retrieval.py
 │   ├── evaluate_routing.py
-│   └── check_evaluation_gate.py
-│
-├── tests/
-│   ├── test_approval.py
-│   ├── test_approval_execution.py
-│   ├── test_approval_safety.py
-│   ├── test_async_tools.py
-│   ├── test_audit.py
-│   ├── test_checkpoint.py
-│   ├── test_checkpoint_resume.py
-│   ├── test_groq.py
-│   ├── test_llm.py
-│   ├── test_metrics.py
-│   └── test_safety.py
-│
-├── audit_logs/
+│   ├── check_evaluation_gate.py
+│   └── run_all.py
 │
 ├── storage/
-│   └── chroma/
+│   ├── chroma/
+│   └── checkpoints/
 │
-├── charts/
-│
-├── .github/
-│   └── workflows/
-│       ├── ci.yml
-│       └── evaluation.yml
+├── tests/
 │
 ├── Dockerfile
 ├── docker-compose.yml
 ├── requirements.txt
+├── requirements-lock.txt
 ├── pytest.ini
 ├── SECURITY.md
+├── PRODUCTION_EVIDENCE.md
 ├── README.md
 └── .gitignore
 ```
 
 ---
 
-# 28. Running Locally
+## 24. Running Locally
 
 Create and activate the virtual environment:
 
@@ -919,13 +868,9 @@ Install dependencies:
 pip install -r requirements.txt
 ```
 
-Configure environment variables in:
+Create the local environment file from `.env.example` and configure the required Groq and application settings.
 
-```text
-.env
-```
-
-Build the vector store:
+Build the document index:
 
 ```powershell
 python -m app.ingest
@@ -937,7 +882,7 @@ Run the API:
 uvicorn app.api:app --reload
 ```
 
-The API is then available on:
+The API is available at:
 
 ```text
 http://localhost:8000
@@ -945,36 +890,30 @@ http://localhost:8000
 
 ---
 
-# 29. Running with Docker
+## 25. Running with Docker
 
 Build and start the production service:
 
 ```powershell
-docker compose up -d --build
-```
-
-Check the service:
-
-```powershell
-docker compose ps
+docker compose up --build
 ```
 
 Check health:
 
-```powershell
-Invoke-WebRequest http://localhost:8000/health
+```text
+http://localhost:8000/health
 ```
 
 Check readiness:
 
-```powershell
-Invoke-WebRequest http://localhost:8000/ready
+```text
+http://localhost:8000/ready
 ```
 
-Check metrics:
+View metrics:
 
-```powershell
-Invoke-WebRequest http://localhost:8000/metrics
+```text
+http://localhost:8000/metrics
 ```
 
 Stop the service:
@@ -985,33 +924,21 @@ docker compose down
 
 ---
 
-# 30. Running Tests
+## 26. Running Evaluations
 
-Run the full test suite:
-
-```powershell
-python -m pytest -q
-```
-
-Run Ruff:
+Run the routing evaluation:
 
 ```powershell
-python -m ruff check .
+python -m evals.evaluate_routing
 ```
 
-Check installed dependency consistency:
+Run the full evaluation orchestration:
 
 ```powershell
-python -m pip check
+python -m evals.run_all
 ```
 
-Run the functional evaluation:
-
-```powershell
-python -m evals.evaluate
-```
-
-Run injection evaluation:
+Run the dedicated injection evaluation:
 
 ```powershell
 python -m evals.evaluate_injection
@@ -1023,6 +950,24 @@ Run the production evaluation gate:
 python -m evals.check_evaluation_gate
 ```
 
+Run tests:
+
+```powershell
+pytest -q
+```
+
+Run Ruff:
+
+```powershell
+ruff check app tests evals *.py
+```
+
+Check dependency consistency:
+
+```powershell
+python -m pip check
+```
+
 Run dependency auditing:
 
 ```powershell
@@ -1031,7 +976,7 @@ python -m pip_audit
 
 ---
 
-# 31. Evaluation Artifacts
+## 27. Evaluation Artifacts
 
 The project generates evaluation artifacts including:
 
@@ -1039,211 +984,224 @@ The project generates evaluation artifacts including:
 evals/evaluation_results.json
 evals/injection_results.json
 evals/routing_evaluation_results.json
+evals/retrieval_evaluation_results.json
 evals/cost_projection.json
+evals/evaluation_report.json
 ```
 
 Evaluation charts include:
 
 ```text
-category_pass_rate.png
-cold_vs_warm_latency.png
-injection_evaluation.png
-latency_metrics.png
-monthly_cost_projection.png
-retrieval_quality.png
+evals/charts/category_pass_rate.png
+evals/charts/cold_vs_warm_latency.png
+evals/charts/injection_evaluation.png
+evals/charts/latency_metrics.png
+evals/charts/monthly_cost_projection.png
+evals/charts/retrieval_quality.png
 ```
 
 These artifacts provide evidence for:
 
 * quality
+* routing
 * retrieval
 * latency
 * cost
-* injection resistance
-* routing
+* prompt-injection resistance
 * category-level performance
 
 ---
 
-# 32. Production Limitations
+## 28. Production Limitations
 
-The current system has several limitations that should be acknowledged.
+The current system has several limitations.
 
-### Small evaluation set
+### Evaluation Size
 
-The functional evaluation currently contains only 5 cases.
+The routing evaluation contains 32 cases, while the dedicated retrieval and injection benchmarks remain relatively small.
 
-Therefore, 100% pass rate should not be interpreted as statistical proof of perfect production quality.
+A 100% benchmark result should not be interpreted as statistical proof of perfect production quality.
 
-### Keyword-based evaluation
+### Keyword-Based Evaluation
 
-Some answer evaluation uses expected keywords.
+Some evaluation checks use expected keywords or structured rules.
 
-This can produce false negatives when a semantically correct answer uses different terminology.
+This can produce false positives when expected terms appear without sufficient semantic correctness.
 
-It can also produce false positives if expected words appear without sufficient context.
+### Prompt-Injection Coverage
 
-### Small injection set
+The current injection benchmark contains five adversarial examples.
 
-The injection evaluation currently contains 5 adversarial examples.
+A larger continuously growing adversarial dataset is required for stronger security evidence.
 
-A larger and continuously growing adversarial dataset is required for stronger security evidence.
-
-### Cold-start latency
+### Cold-Start Latency
 
 Local embedding initialization can produce substantially higher cold-start latency than warm requests.
 
-Warm P95 is therefore used for the production latency gate while cold-start behavior remains separately reported.
+Cold-start behavior is therefore reported separately.
 
-### External model latency
+### External Model Latency
 
-LLM latency depends on provider response time, network conditions, traffic, rate limits, and model availability.
+LLM latency depends on provider response time, network conditions, traffic, and rate limits.
 
-### Cost projections
+### Cost Projections
 
-Projected monthly costs are estimates based on measured or modeled assumptions.
+Projected monthly costs are estimates based on documented assumptions.
 
 Actual billing can differ.
 
-### Retrieval dependency
+### Retrieval Dependence
 
-Retrieval quality depends on:
-
-* corpus quality
-* chunk size
-* chunk overlap
-* embedding model
-* retrieval threshold
-* query formulation
+Answer quality depends on retrieval quality and the underlying document corpus.
 
 Changes to the document corpus should trigger retrieval and evaluation checks.
 
+### Dependency Security
+
+The current ChromaDB dependency has documented security advisories.
+
+The project documents this as an explicit dependency exception rather than hiding the finding.
+
 ---
 
-# 33. Production Hardening Status
+## 29. Production Hardening Status
 
 The project has completed the major production-hardening areas:
 
-* [x] RAG ingestion
-* [x] Retrieval quality investigation
-* [x] Agent routing
-* [x] Async tool execution
+* [x] RAG document ingestion
+* [x] Local embeddings
+* [x] Chroma persistence
 * [x] LangGraph orchestration
 * [x] Durable checkpointing
-* [x] Safety guardrails
-* [x] Prompt-injection evaluation
+* [x] Tool routing
+* [x] Input validation
+* [x] Prompt-injection protection
+* [x] Output validation
 * [x] Human approval workflow
 * [x] Audit logging
-* [x] FastAPI deployment
+* [x] FastAPI API
 * [x] Docker deployment
-* [x] Health checks
-* [x] Readiness checks
+* [x] Health/readiness checks
 * [x] Runtime metrics
-* [x] Cost measurement
-* [x] Cost projection
+* [x] Token and cost instrumentation
 * [x] Latency measurement
-* [x] Evaluation dataset
+* [x] Routing evaluation
+* [x] Retrieval evaluation
+* [x] Injection-resistance evaluation
 * [x] Evaluation gate
-* [x] Category-level evaluation gates
 * [x] CI lint gate
 * [x] CI test gate
-* [x] Injection-resistance gate
-* [x] Dependency security review
+* [x] Dependency audit
 * [x] Production documentation
 
 ---
 
-# 34. Final Verification
+## 30. Final Verification
 
-Latest local verification:
+Latest verified local evidence:
 
 ```text
-Ruff
-------------------------------
-All checks passed!
-
-
-Pytest
-------------------------------
-40 passed, 1 warning
-
-
-pip check
-------------------------------
-No broken requirements found.
-
-
-Evaluation
-------------------------------
-5/5 passed
+Routing evaluation:
+32/32 passed
 100% completion
 100% pass rate
 
+Retrieval Top-2:
+4/4 passed
 
-Injection evaluation
-------------------------------
+Prompt-injection evaluation:
 5/5 passed
-100% resistance
 
+Automated tests:
+41 passed
+1 warning
 
-Evaluation gate
-------------------------------
-PASS: All evaluation gates satisfied.
+Ruff:
+All checks passed
 ```
 
-The project currently has automated evidence for application correctness, retrieval behavior, safety, approval controls, observability, dependency consistency, latency, cost, and deployment readiness.
+Latest routing latency evidence:
+
+```text
+Average:
+1,599.54 ms
+
+P50:
+662.41 ms
+
+P95:
+1,295.26 ms
+
+Warm average:
+510.87 ms
+
+Warm P50:
+636.80 ms
+
+Warm maximum:
+1,473.21 ms
+
+Cold start:
+35,348.30 ms
+```
+
+The project therefore has automated evidence for application correctness, routing behavior, retrieval behavior, safety controls, approval workflows, observability, latency, cost modeling, dependency review, and deployment readiness.
+
+The evaluation evidence should be interpreted within the documented limitations and benchmark sizes.
 
 ---
 
-# 35. Next Improvements
+## 31. Next Improvements
 
 The next production iteration should focus on increasing the quality and reliability of the evidence rather than simply increasing the number of application features.
 
 Recommended improvements include:
 
 1. Expand the golden evaluation set.
-2. Grow the set from production traces.
+2. Grow the dataset from production traces.
 3. Stratify evaluations by query type.
 4. Add more adversarial injection cases.
 5. Add human/inter-rater evaluation for answer quality.
-6. Monitor retrieval quality over time.
+6. Track retrieval precision and recall over a larger benchmark.
 7. Track latency and cost distributions in production.
 8. Add regression checks for retrieval changes.
 9. Continue monitoring dependency security advisories.
-10. Add canary/shadow evaluation before major model or prompt changes.
+10. Add canary or shadow evaluation before major model or prompt changes.
 
 ---
 
-# 36. Summary
+## 32. Summary
 
-The Company Policy Agent is a production-oriented RAG/agent system with:
+The Company Policy Agent is a production-oriented RAG/agent system combining:
 
-* local vector retrieval
-* Groq-hosted LLM inference
+* Local document retrieval
+* Chroma vector storage
+* Hugging Face embeddings
+* Groq-hosted LLMs
 * LangGraph orchestration
-* durable state
-* safety controls
-* human approval
-* audit trails
-* runtime monitoring
+* Model routing
+* Safety guardrails
+* Human approval workflows
+* Audit logging
+* Durable checkpointing
+* FastAPI
+* Streamlit
 * Docker deployment
-* automated evaluation
+* Runtime observability
+* Automated evaluation
 * CI quality gates
 
-Latest measured quality:
+Latest evaluation evidence:
 
 ```text
-Functional evaluation:     5/5
-Overall pass rate:         100%
-Category pass rate:        100%
-Retrieval source hit rate: 100%
-Injection resistance:      100%
-Warm P95 latency:          1.08 seconds
-Average measured cost:     $0.00013641/query
-Tests:                     40 passed
+Routing evaluation:        32/32 = 100%
+Routing completion:        100%
+Retrieval Top-2:            4/4 = 100%
+Out-of-scope retrieval:     1/1 = 100%
+Injection evaluation:       5/5 = 100%
+
+Tests:                     41 passed
 Ruff:                      Passed
-pip check:                 Passed
-Evaluation gate:           Passed
 ```
 
-The system is production-hardened for the current project scope, while the documented limitations make clear where additional evaluation and operational evidence are required before treating the system as a large-scale production service.
+The system is production-hardened for the current project scope, while the documented limitations identify where additional evaluation, security testing, and operational evidence are required before treating the system as a large-scale production service.
