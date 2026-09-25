@@ -79,6 +79,39 @@ def record_approval_event(
     return event
 
 
+def record_security_event(
+    request_id: str,
+    event_type: str,
+    status: str,
+    details: dict[str, Any] | None = None,
+):
+    """
+    Record a security-related event in the audit trail.
+
+    Examples:
+        PROMPT_INJECTION_DETECTED
+        INPUT_REJECTED
+        OUTPUT_VALIDATION_FAILED
+    """
+
+    _ensure_audit_directory()
+
+    event = {
+        "event_id": str(uuid.uuid4()),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "request_id": request_id,
+        "event_type": "security",
+        "security_event": event_type,
+        "status": status,
+        "details": details or {},
+    }
+
+    with AUDIT_FILE.open("a", encoding="utf-8") as file:
+        file.write(json.dumps(event, default=str) + "\n")
+
+    return event
+
+
 def get_audit_events():
     """
     Read all audit events.

@@ -6,7 +6,7 @@ from uuid import uuid4
 from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
 
-from app.graph import graph
+from app.agent import run_agent
 from app.llm import LLMServiceError
 from app.logging_config import setup_logging
 from app.metrics import metrics
@@ -364,11 +364,11 @@ def chat(
 ):
     """
     Execute the Company Policy Agent.
-    """
 
-    # IMPORTANT:
-    # request = ChatRequest
-    # http_request = FastAPI Request
+    All chat requests go through run_agent(), which
+    performs input validation and prompt-injection
+    detection before invoking the LangGraph workflow.
+    """
 
     request_id = getattr(
         http_request.state,
@@ -390,31 +390,14 @@ def chat(
         },
     )
 
-    initial_state = {
-        "request_id": request_id,
-        "session_id": thread_id,
-        "question": request.question,
-        "conversation_history": [],
-        "tool": "",
-        "answer": "",
-        "sources": [],
-        "tools_used": [],
-        "approval_id": "",
-        "approval_status": "",
-        "trace": [],
-    }
-
     start_time = time.perf_counter()
 
     try:
 
-        result = graph.invoke(
-            initial_state,
-            config={
-                "configurable": {
-                    "thread_id": thread_id,
-                }
-            },
+        result = run_agent(
+            question=request.question,
+            session_id=thread_id,
+            request_id=request_id,
         )
 
     except LLMServiceError as exc:
@@ -424,7 +407,6 @@ def chat(
             - start_time
         ) * 1000
 
-        # Record complete chat/agent latency
         metrics.observe_chat_latency(
             latency_ms
         )
@@ -458,6 +440,45 @@ def chat(
             },
         ) from exc
 
+    except (
+        TypeError,
+        ValueError,
+    ) as exc:
+
+        latency_ms = (
+            time.perf_counter()
+            - start_time
+        ) * 1000
+
+        metrics.observe_chat_latency(
+            latency_ms
+        )
+
+        logger.warning(
+            "Invalid chat request",
+            extra={
+                "request_id": request_id,
+                "thread_id": thread_id,
+                "endpoint": "/chat",
+                "status": 400,
+                "latency_ms": round(
+                    latency_ms,
+                    2,
+                ),
+                "error": str(exc),
+            },
+        )
+
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "invalid_request",
+                "message": str(exc),
+                "request_id": request_id,
+                "thread_id": thread_id,
+            },
+        ) from exc
+
     except Exception as exc:
 
         latency_ms = (
@@ -465,7 +486,6 @@ def chat(
             - start_time
         ) * 1000
 
-        # Record complete chat/agent latency
         metrics.observe_chat_latency(
             latency_ms
         )
@@ -595,6 +615,8 @@ def get_checkpoint(
     """
 
     try:
+
+        from app.graph import graph
 
         state = graph.get_state(
             {

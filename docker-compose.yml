@@ -11,6 +11,7 @@ services:
     volumes:
       - ./storage/chroma:/app/storage/chroma
       - checkpoint_data:/app/storage/checkpoints
+      - ./audit_logs:/app/audit_logs
 
     restart: unless-stopped
 

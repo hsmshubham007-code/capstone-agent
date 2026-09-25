@@ -1,5 +1,6 @@
 from app.audit import (
     create_request_id,
+    record_security_event,
     record_tool_call,
 )
 from app.graph import graph
@@ -17,19 +18,22 @@ from app.memory import (
 def run_agent(
     question,
     session_id="default",
+    request_id=None,
 ):
     """
     Run the company policy agent.
 
-    Every request receives a unique request_id.
+    Every request receives a unique request_id unless one
+    is supplied by the API layer.
 
     Safe tools can execute immediately.
 
-    Risky tools are stopped and placed into
-    the human approval queue.
+    Risky tools are stopped and placed into the
+    human approval queue.
     """
 
-    request_id = create_request_id()
+    if request_id is None:
+        request_id = create_request_id()
 
     question = validate_input(
         question
@@ -42,6 +46,15 @@ def run_agent(
     if detect_prompt_injection(
         question
     ):
+        record_security_event(
+            request_id=request_id,
+            event_type="PROMPT_INJECTION_DETECTED",
+            status="BLOCKED",
+            details={
+                "reason": "prompt_injection",
+            },
+        )
+
         record_tool_call(
             request_id=request_id,
             tool_name="guardrail",
