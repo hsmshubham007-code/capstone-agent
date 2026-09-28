@@ -175,7 +175,7 @@ The current performance risk is primarily **LLM/provider latency**, rather than 
 | T01 | Identify stakeholder workflow | Must | 1 hr | Done | Stakeholder workflow notes |
 | T02 | Define problem statement | Must | 1 hr | Done | `stakeholder_problem_statement.md` |
 | T03 | Define success metrics and human boundary | Must | 1 hr | Done | `success_metrics_and_human_boundary.md` |
-| T04 | Perform data feasibility spike | Must | 2 hrs | Done | `data_feasibility_spike.md` |
+| T04 | Perform data feasibility spike | Must | 2 hrs | Done | `docs/data_feasibility_spike.md` |
 | T05 | Collect policy PDFs | Must | 1 hr | Done | `data/` policy documents |
 | T06 | Build PDF ingestion pipeline | Must | 2 hrs | Done | `ingest.py` |
 | T07 | Configure document chunking | Must | 1 hr | Done | Text splitter configuration |
