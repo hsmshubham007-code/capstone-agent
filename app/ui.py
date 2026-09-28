@@ -4,11 +4,6 @@ import uuid
 import requests
 import streamlit as st
 
-from app.approval import (
-    approve_request,
-    execute_approved_request,
-    get_approval_request,
-)
 from app.async_tools import (
     run_tools_parallel,
     run_tools_sequential,
@@ -18,13 +13,7 @@ st.set_page_config(
     page_title="Company Policy Agent",
     page_icon="🤖",
     layout="wide",
-)
-
-
-st.title("🤖 Company Policy Agent")
-
-st.caption(
-    "Async RAG agent with LangGraph durable checkpointing"
+    initial_sidebar_state="collapsed",
 )
 
 
@@ -32,7 +21,22 @@ st.caption(
 # CONFIGURATION
 # ============================================================
 
+# Production FastAPI endpoint.
+# Docker Compose maps:
+# host port 8000 -> container port 8000
 API_URL = "http://localhost:8000"
+
+
+# ============================================================
+# PAGE HEADER
+# ============================================================
+
+st.title("🤖 Company Policy Agent")
+
+st.caption(
+    "Company policy assistant with RAG, LangGraph, "
+    "checkpointing, and human approval"
+)
 
 
 # ============================================================
@@ -53,20 +57,112 @@ if "messages" not in st.session_state:
 
 
 # ============================================================
-# API HELPER
+# SIDEBAR - CHECKPOINTING
 # ============================================================
 
-def call_chat_api(question, thread_id):
-    """
-    Send the production chat request to the FastAPI backend.
+with st.sidebar:
 
-    The FastAPI service owns:
+    st.header("Checkpointing")
+
+    st.caption(
+        "LangGraph durable conversation state"
+    )
+
+    st.write(
+        "**Thread ID**"
+    )
+
+    st.code(
+        thread_id,
+        language="text",
+    )
+
+    st.divider()
+
+    try:
+
+        checkpoint_response = requests.get(
+            f"{API_URL}/checkpoint/{thread_id}",
+            timeout=5,
+        )
+
+        if checkpoint_response.ok:
+
+            checkpoint_data = (
+                checkpoint_response.json()
+            )
+
+            st.success(
+                "Checkpoint available"
+            )
+
+            values = checkpoint_data.get(
+                "values",
+                {},
+            )
+
+            if values:
+
+                st.write(
+                    "**Conversation state**"
+                )
+
+                approval_status = values.get(
+                    "approval_status",
+                    "",
+                )
+
+                if approval_status:
+
+                    st.write(
+                        f"Approval: "
+                        f"`{approval_status}`"
+                    )
+
+                question = values.get(
+                    "question",
+                    "",
+                )
+
+                if question:
+
+                    st.write(
+                        f"Last question: "
+                        f"`{question}`"
+                    )
+
+        else:
+
+            st.info(
+                "No checkpoint state available yet."
+            )
+
+    except requests.RequestException:
+
+        st.info(
+            "Checkpoint information unavailable."
+        )
+
+
+# ============================================================
+# API HELPERS
+# ============================================================
+
+def call_chat_api(
+    question,
+    thread_id,
+):
+    """
+    Send the production chat request to FastAPI.
+
+    FastAPI owns:
     - LangGraph execution
     - RAG
     - LLM calls
     - checkpointing
     - metrics
     - audit logging
+    - approval state
     """
 
     try:
@@ -87,8 +183,117 @@ def call_chat_api(question, thread_id):
     except requests.RequestException as exc:
 
         st.error(
-            f"❌ Unable to connect to Company Policy Agent API: "
+            f"Chat API request failed: {exc}"
+        )
+
+        return None
+
+
+def get_approval_from_api(
+    approval_id,
+):
+    """
+    Retrieve the authoritative approval state
+    from the FastAPI backend.
+    """
+
+    try:
+
+        response = requests.get(
+            f"{API_URL}/approvals/{approval_id}",
+            timeout=10,
+        )
+
+        response.raise_for_status()
+
+        return response.json()
+
+    except requests.RequestException as exc:
+
+        st.error(
+            f"Could not retrieve approval request: "
             f"{exc}"
+        )
+
+        return None
+
+
+def approve_via_api(
+    approval_id,
+):
+    """
+    Approve the request through FastAPI.
+    """
+
+    try:
+
+        response = requests.post(
+            f"{API_URL}/approvals/{approval_id}/approve",
+            timeout=10,
+        )
+
+        response.raise_for_status()
+
+        return response.json()
+
+    except requests.RequestException as exc:
+
+        st.error(
+            f"Approval failed: {exc}"
+        )
+
+        return None
+
+
+def reject_via_api(
+    approval_id,
+):
+    """
+    Reject the request through FastAPI.
+    """
+
+    try:
+
+        response = requests.post(
+            f"{API_URL}/approvals/{approval_id}/reject",
+            timeout=10,
+        )
+
+        response.raise_for_status()
+
+        return response.json()
+
+    except requests.RequestException as exc:
+
+        st.error(
+            f"Rejection failed: {exc}"
+        )
+
+        return None
+
+
+def execute_via_api(
+    approval_id,
+):
+    """
+    Execute an approved request through FastAPI.
+    """
+
+    try:
+
+        response = requests.post(
+            f"{API_URL}/approvals/{approval_id}/execute",
+            timeout=30,
+        )
+
+        response.raise_for_status()
+
+        return response.json()
+
+    except requests.RequestException as exc:
+
+        st.error(
+            f"Execution failed: {exc}"
         )
 
         return None
@@ -98,349 +303,339 @@ def call_chat_api(question, thread_id):
 # DISPLAY HELPERS
 # ============================================================
 
-def display_tools(tools):
-
-    for tool_name, branches in tools.items():
-
-        st.markdown(
-            f"🔎 **`{tool_name}`**"
-        )
-
-        for branch in branches:
-
-            st.markdown(
-                f"&nbsp;&nbsp;&nbsp;&nbsp;└── `{branch}`"
-            )
-
-
-def display_sources(sources):
+def display_sources(
+    sources,
+):
+    """Display retrieved document sources."""
 
     if not sources:
-
-        st.info(
-            "No sources were retrieved."
-        )
-
         return
 
     for source in sources:
 
-        if isinstance(source, dict):
+        if isinstance(
+            source,
+            dict,
+        ):
 
-            source_name = source.get(
-                "source",
-                "Unknown source",
+            source_name = (
+                source.get("source")
+                or source.get("file")
+                or source.get("document")
+                or "Unknown source"
             )
 
-            st.markdown(
-                f"📄 **{source_name}**"
+            page = source.get(
+                "page"
             )
 
-            if "page" in source:
+            if page is not None:
 
-                st.write(
-                    f"Page: `{source['page']}`"
+                st.markdown(
+                    f"- **{source_name}** "
+                    f"(page {page})"
                 )
 
-            if "tool" in source:
+            else:
 
-                st.write(
-                    f"Retrieval branch: "
-                    f"`{source['tool']}`"
+                st.markdown(
+                    f"- **{source_name}**"
                 )
-
-            if "score" in source:
-
-                st.write(
-                    f"Similarity score: "
-                    f"`{source['score']:.4f}`"
-                )
-
-        elif isinstance(source, str):
-
-            st.markdown(
-                f"📄 **{source}**"
-            )
-
-            st.write(
-                "Source retrieved from the company "
-                "policy knowledge base."
-            )
 
         else:
 
             st.markdown(
-                f"📄 **{source!s}**"
+                f"- **{source}**"
             )
 
-        st.divider()
 
+def display_tools(
+    tools,
+):
+    """Display tools used by the agent."""
 
-# ============================================================
-# SIDEBAR
-# ============================================================
+    if isinstance(
+        tools,
+        dict,
+    ):
 
-with st.sidebar:
-
-    st.header("💾 Checkpoint")
-
-    st.write(
-        "This chat uses a persistent LangGraph thread "
-        "managed by the FastAPI backend."
-    )
-
-    st.code(
-        thread_id,
-        language="text",
-    )
-
-    try:
-
-        checkpoint_response = requests.get(
-            f"{API_URL}/checkpoint/{thread_id}",
-            timeout=5,
+        tools = list(
+            tools.keys()
         )
 
-        if checkpoint_response.status_code == 200:
+    if isinstance(
+        tools,
+        list,
+    ):
 
-            checkpoint_data = (
-                checkpoint_response.json()
+        for tool in tools:
+
+            st.markdown(
+                f"- `{tool}`"
             )
 
-            values = checkpoint_data.get(
-                "values",
-                {},
-            )
+    else:
 
-            st.success(
-                "Checkpoint found"
-            )
+        st.markdown(
+            f"- `{tools}`"
+        )
 
-            st.write(
-                f"Tool: "
-                f"`{values.get('tool', '')}`"
-            )
 
-            st.write(
-                f"Sources: "
-                f"{len(values.get('sources', []))}"
-            )
+# ============================================================
+# HUMAN APPROVAL
+# ============================================================
 
-            st.write(
-                f"Trace steps: "
-                f"{len(values.get('trace', []))}"
-            )
+def display_approval(
+    approval_id,
+):
+    """
+    Display a clean HITL approval card.
 
-            approval_status = values.get(
-                "approval_status",
-                "",
-            )
+    Only two actions are exposed:
+    - Approve
+    - Reject
 
-            if approval_status:
+    Approve automatically performs:
+    PENDING -> APPROVED -> EXECUTED
+    """
 
-                st.write(
-                    f"Approval: "
-                    f"`{approval_status}`"
-                )
+    if not approval_id:
+        return
 
-        else:
+    approval = get_approval_from_api(
+        approval_id
+    )
 
-            st.info(
-                "No checkpoint yet for this chat."
-            )
+    if not approval:
+        return
 
-    except requests.RequestException:
+    status = approval.get(
+        "status",
+        "UNKNOWN",
+    )
+
+    tool_name = approval.get(
+        "tool_name",
+        "Unknown tool",
+    )
+
+    arguments = approval.get(
+        "arguments",
+        {},
+    )
+
+    # --------------------------------------------------------
+    # PENDING
+    # --------------------------------------------------------
+
+    if status == "PENDING":
 
         st.warning(
-            "Checkpoint API unavailable."
+            "### Human approval required"
+        )
+
+        st.write(
+            f"**Action:** `{tool_name}`"
+        )
+
+        st.write(
+            "**Arguments:**"
+        )
+
+        st.json(
+            arguments
+        )
+
+        st.caption(
+            f"Approval ID: {approval_id}"
+        )
+
+        col1, col2 = st.columns(
+            2
+        )
+
+        with col1:
+
+            if st.button(
+                "✅ Approve",
+                key=f"approve_{approval_id}",
+                use_container_width=True,
+            ):
+
+                approved = approve_via_api(
+                    approval_id
+                )
+
+                if approved:
+
+                    execution = execute_via_api(
+                        approval_id
+                    )
+
+                    if execution:
+
+                        st.success(
+                            "Action approved and executed."
+                        )
+
+                        st.rerun()
+
+        with col2:
+
+            if st.button(
+                "❌ Reject",
+                key=f"reject_{approval_id}",
+                use_container_width=True,
+            ):
+
+                rejected = reject_via_api(
+                    approval_id
+                )
+
+                if rejected:
+
+                    st.error(
+                        "Action rejected. "
+                        "No changes were made."
+                    )
+
+                    st.rerun()
+
+    # --------------------------------------------------------
+    # EXECUTED
+    # --------------------------------------------------------
+
+    elif status == "EXECUTED":
+
+        st.success(
+            "✅ Action approved and executed."
+        )
+
+        result = approval.get(
+            "result"
+        )
+
+        if result:
+
+            st.write(
+                "**Result:**"
+            )
+
+            st.json(
+                result
+            )
+
+    # --------------------------------------------------------
+    # REJECTED
+    # --------------------------------------------------------
+
+    elif status == "REJECTED":
+
+        st.error(
+            "❌ Action rejected. "
+            "No changes were made."
+        )
+
+    # --------------------------------------------------------
+    # APPROVED
+    # --------------------------------------------------------
+
+    elif status == "APPROVED":
+
+        st.info(
+            "Action approved. "
+            "Execution is in progress."
+        )
+
+    # --------------------------------------------------------
+    # UNKNOWN
+    # --------------------------------------------------------
+
+    else:
+
+        st.info(
+            f"Approval status: `{status}`"
         )
 
 
 # ============================================================
-# DISPLAY PREVIOUS CHAT
+# CHAT HISTORY
 # ============================================================
 
 for message in st.session_state.messages:
 
-    with st.chat_message(
-        message["role"]
-    ):
+    if message["role"] == "user":
 
-        st.markdown(
-            message["content"]
-        )
+        with st.chat_message("user"):
 
-        if (
-            message["role"] == "assistant"
-            and "result" in message
-        ):
+            st.markdown(
+                message["content"]
+            )
 
-            result = message["result"]
+    elif message["role"] == "assistant":
+
+        with st.chat_message("assistant"):
+
+            st.markdown(
+                message["content"]
+            )
+
+            result = message.get(
+                "result",
+                {},
+            )
 
             # ------------------------------------------------
             # APPROVAL
             # ------------------------------------------------
 
-            if result.get("approval_id"):
+            approval_id = result.get(
+                "approval_id",
+                "",
+            )
 
-                approval_id = result[
-                    "approval_id"
-                ]
+            if approval_id:
 
-                approval = get_approval_request(
+                display_approval(
                     approval_id
                 )
-
-                if approval:
-
-                    status = approval["status"]
-
-                    if status == "PENDING":
-
-                        st.warning(
-                            "⚠️ Human approval is required "
-                            "before this action can run."
-                        )
-
-                        st.write(
-                            f"**Tool:** "
-                            f"`{approval['tool_name']}`"
-                        )
-
-                        st.write(
-                            "**Arguments:**"
-                        )
-
-                        st.json(
-                            approval["arguments"]
-                        )
-
-                        st.code(
-                            approval_id,
-                            language="text",
-                        )
-
-                        col1, col2 = st.columns(2)
-
-                        with col1:
-
-                            if st.button(
-                                "✅ Approve",
-                                key=f"approve_{approval_id}",
-                            ):
-
-                                try:
-
-                                    approve_request(
-                                        approval_id
-                                    )
-
-                                    execution = (
-                                        execute_approved_request(
-                                            approval_id
-                                        )
-                                    )
-
-                                    st.success(
-                                        "Action approved "
-                                        "and executed successfully."
-                                    )
-
-                                    st.json(
-                                        execution["result"]
-                                    )
-
-                                    st.rerun()
-
-                                except RuntimeError as error:
-
-                                    st.error(
-                                        f"Approval execution failed: "
-                                        f"{error}"
-                                    )
-
-                        with col2:
-
-                            if st.button(
-                                "❌ Reject",
-                                key=f"reject_{approval_id}",
-                            ):
-
-                                st.error(
-                                    "Request rejected."
-                                )
-
-
-            # ------------------------------------------------
-            # LATENCY
-            # ------------------------------------------------
-
-            if result.get(
-                "parallel_latency"
-            ) is not None:
-
-                with st.expander(
-                    "⏱️ Detailed Latency"
-                ):
-
-                    st.write(
-                        f"Sequential retrieval: "
-                        f"**{result['sequential_latency']:.3f} seconds**"
-                    )
-
-                    st.write(
-                        f"Parallel retrieval: "
-                        f"**{result['parallel_latency']:.3f} seconds**"
-                    )
-
-                    st.write(
-                        f"Latency reduction: "
-                        f"**{result['reduction']:.3f} seconds**"
-                    )
-
-                    st.write(
-                        f"Latency reduction percentage: "
-                        f"**{result['reduction_percent']:.2f}%**"
-                    )
-
-                    st.write(
-                        f"Speedup: "
-                        f"**{result['speedup']:.2f}x**"
-                    )
-
-                    st.write(
-                        f"Complete async benchmark latency: "
-                        f"**{result['total_latency']:.3f} seconds**"
-                    )
-
 
             # ------------------------------------------------
             # TOOLS
             # ------------------------------------------------
 
-            if result.get("tools"):
+            tools = result.get(
+                "tools",
+                [],
+            )
+
+            if tools:
 
                 with st.expander(
                     "🔧 Tools Used"
                 ):
 
                     display_tools(
-                        result["tools"]
+                        tools
                     )
-
 
             # ------------------------------------------------
             # SOURCES
             # ------------------------------------------------
 
-            if result.get("sources"):
+            sources = result.get(
+                "sources",
+                [],
+            )
+
+            if sources:
 
                 with st.expander(
                     "📚 Sources Cited"
                 ):
 
                     display_sources(
-                        result["sources"]
+                        sources
                     )
 
 
@@ -472,7 +667,6 @@ if question:
             question
         )
 
-
     # --------------------------------------------------------
     # RUN AGENT
     # --------------------------------------------------------
@@ -480,7 +674,7 @@ if question:
     with st.chat_message("assistant"):
 
         with st.spinner(
-            "Running agent with checkpointing..."
+            "Running agent..."
         ):
 
             # =================================================
@@ -534,7 +728,6 @@ if question:
 
                 speedup = 0
 
-
             # =================================================
             # PRODUCTION AGENT
             # =================================================
@@ -548,9 +741,8 @@ if question:
 
                 st.stop()
 
-
         # ----------------------------------------------------
-        # ACTUAL AGENT ANSWER
+        # AGENT ANSWER
         # ----------------------------------------------------
 
         st.markdown(
@@ -559,7 +751,6 @@ if question:
                 "",
             )
         )
-
 
         # ----------------------------------------------------
         # APPROVAL
@@ -572,42 +763,12 @@ if question:
 
         if approval_id:
 
-            approval = get_approval_request(
+            display_approval(
                 approval_id
             )
 
-            if approval:
-
-                st.warning(
-                    "⚠️ Human approval is required "
-                    "before this action can run."
-                )
-
-                st.write(
-                    f"**Tool:** "
-                    f"`{approval['tool_name']}`"
-                )
-
-                st.write(
-                    "**Arguments:**"
-                )
-
-                st.json(
-                    approval["arguments"]
-                )
-
-                st.write(
-                    "**Approval ID:**"
-                )
-
-                st.code(
-                    approval_id,
-                    language="text",
-                )
-
-
         # ----------------------------------------------------
-        # TOOLS USED
+        # TOOLS
         # ----------------------------------------------------
 
         tools_used = graph_result.get(
@@ -621,12 +782,9 @@ if question:
                 "🔧 Tools Used"
             ):
 
-                for tool in tools_used:
-
-                    st.markdown(
-                        f"🔎 **`{tool}`**"
-                    )
-
+                display_tools(
+                    tools_used
+                )
 
         # ----------------------------------------------------
         # SOURCES
@@ -647,9 +805,8 @@ if question:
                     sources
                 )
 
-
         # ----------------------------------------------------
-        # LATENCY DETAILS
+        # LATENCY
         # ----------------------------------------------------
 
         with st.expander(
@@ -657,30 +814,29 @@ if question:
         ):
 
             st.write(
-                f"Sequential retrieval: "
+                "Sequential retrieval: "
                 f"**{sequential_latency:.3f} seconds**"
             )
 
             st.write(
-                f"Parallel retrieval: "
+                "Parallel retrieval: "
                 f"**{parallel_latency:.3f} seconds**"
             )
 
             st.write(
-                f"Latency reduction: "
+                "Latency reduction: "
                 f"**{reduction:.3f} seconds**"
             )
 
             st.write(
-                f"Latency reduction percentage: "
+                "Latency reduction percentage: "
                 f"**{reduction_percent:.2f}%**"
             )
 
             st.write(
-                f"Speedup: "
+                "Speedup: "
                 f"**{speedup:.2f}x**"
             )
-
 
         # ----------------------------------------------------
         # SAVE MESSAGE
@@ -689,14 +845,11 @@ if question:
         st.session_state.messages.append(
             {
                 "role": "assistant",
-
                 "content": graph_result.get(
                     "answer",
                     "",
                 ),
-
                 "result": {
-
                     "sequential_latency":
                         sequential_latency,
 
@@ -716,10 +869,7 @@ if question:
                         parallel_latency,
 
                     "tools":
-                        {
-                            tool: ["LangGraph"]
-                            for tool in tools_used
-                        },
+                        tools_used,
 
                     "sources":
                         sources,

@@ -175,7 +175,7 @@ The current performance risk is primarily **LLM/provider latency**, rather than 
 | T01 | Identify stakeholder workflow | Must | 1 hr | Done | Stakeholder workflow notes |
 | T02 | Define problem statement | Must | 1 hr | Done | `stakeholder_problem_statement.md` |
 | T03 | Define success metrics and human boundary | Must | 1 hr | Done | `success_metrics_and_human_boundary.md` |
-| T04 | Perform data feasibility spike | Must | 2 hrs | Done | `data_feasibility_spike.md` |
+| T04 | Perform data feasibility spike | Must | 2 hrs | Done | `docs/data_feasibility_spike.md` |
 | T05 | Collect policy PDFs | Must | 1 hr | Done | `data/` policy documents |
 | T06 | Build PDF ingestion pipeline | Must | 2 hrs | Done | `ingest.py` |
 | T07 | Configure document chunking | Must | 1 hr | Done | Text splitter configuration |
@@ -192,7 +192,7 @@ The current performance risk is primarily **LLM/provider latency**, rather than 
 | T18 | Implement audit trail | Should | 2 hrs | Done | `app/audit.py` |
 | T19 | Add LangGraph checkpointing | Should | 2 hrs | Done | SQLite checkpointing |
 | T20 | Add async tool execution | Should | 3 hrs | Done | `app/async_tools.py` |
-| T21 | Benchmark async execution | Should | 2 hrs | Done | `benchmark_async.py` |
+| T21 | Benchmark async execution | Should | 2 hrs | Done | `benchmarks/benchmark_async.py` |
 | T22 | Build Streamlit UI | Should | 2 hrs | Done | `app/ui.py` |
 | T23 | Build FastAPI API | Should | 2 hrs | Done | `app/api.py` |
 | T24 | Add health endpoint | Should | 30 min | Done | `/health` |

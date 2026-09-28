@@ -1,16 +1,17 @@
+import os
 import socket
 import subprocess
-import sys
 import time
 
 import requests
 
 API_URL = "http://localhost:8000"
-MONITORING_URL = "http://localhost:8501"
 UI_URL = "http://localhost:8502"
-
-MONITORING_PORT = 8501
 UI_PORT = 8502
+
+PROJECT_ROOT = os.path.dirname(
+    os.path.abspath(__file__)
+)
 
 CHROME_PATH = (
     r"C:\Program Files\Google\Chrome\Application\chrome.exe"
@@ -18,38 +19,54 @@ CHROME_PATH = (
 
 
 def is_port_available(port):
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+    """Return True when the requested port is available."""
+    with socket.socket(
+        socket.AF_INET,
+        socket.SOCK_STREAM,
+    ) as sock:
         sock.settimeout(1)
-
-        return sock.connect_ex(
-            ("localhost", port)
-        ) != 0
+        return (
+            sock.connect_ex(
+                ("localhost", port)
+            )
+            != 0
+        )
 
 
 def is_service_running(url):
+    """Check whether an HTTP service is responding."""
     try:
         response = requests.get(
             url,
             timeout=2,
         )
-
         return response.ok
-
     except requests.RequestException:
         return False
 
 
 def start_docker():
-    print("🐳 Starting Company Policy Agent backend...")
+    """Start the existing Docker image without rebuilding."""
+    print(
+        "🚀 Starting Company Policy Agent backend..."
+    )
 
     subprocess.run(
-        ["docker", "compose", "up", "-d"],
+        [
+            "docker",
+            "compose",
+            "up",
+            "-d",
+        ],
         check=True,
     )
 
 
 def wait_for_api():
-    print("⏳ Waiting for API to become ready...")
+    """Wait until the FastAPI backend becomes healthy."""
+    print(
+        "⏳ Waiting for API to become ready..."
+    )
 
     for attempt in range(90):
         try:
@@ -65,7 +82,9 @@ def wait_for_api():
                     "healthy",
                     "ok",
                 ):
-                    print("✅ API is healthy.")
+                    print(
+                        "✅ API is healthy."
+                    )
                     return
 
         except requests.RequestException:
@@ -78,93 +97,46 @@ def wait_for_api():
         time.sleep(2)
 
     raise RuntimeError(
-        "❌ API did not become healthy "
-        "within 180 seconds."
-    )
-
-
-def start_monitoring():
-    if not is_port_available(MONITORING_PORT):
-
-        if is_service_running(MONITORING_URL):
-            print(
-                "📊 Monitoring Dashboard "
-                "is already running."
-            )
-
-            return None
-
-        raise RuntimeError(
-            f"❌ Port {MONITORING_PORT} "
-            "is already in use."
-        )
-
-    print(
-        "📊 Starting Monitoring Dashboard..."
-    )
-
-    return subprocess.Popen(
-        [
-            sys.executable,
-            "-m",
-            "streamlit",
-            "run",
-            "monitoring_dashboard.py",
-            "--server.port",
-            str(MONITORING_PORT),
-            "--server.headless",
-            "true",
-        ]
-    )
-
-
-def wait_for_monitoring():
-    print(
-        "⏳ Waiting for Monitoring Dashboard..."
-    )
-
-    for attempt in range(30):
-
-        if is_service_running(
-            MONITORING_URL
-        ):
-            print(
-                "✅ Monitoring Dashboard "
-                "is running."
-            )
-
-            return
-
-        time.sleep(1)
-
-    raise RuntimeError(
-        "❌ Monitoring Dashboard "
-        "did not start."
+        "❌ FastAPI did not become healthy "
+        "within the expected time."
     )
 
 
 def start_ui():
+    """Start the unified Streamlit application."""
     if not is_port_available(UI_PORT):
-        if is_service_running(UI_URL):
-            print(
-                "🤖 Company Policy UI "
-                "is already running."
-            )
-            return None
-
         raise RuntimeError(
-            f"❌ Port {UI_PORT} "
-            "is already in use."
+            f"❌ Port {UI_PORT} is already in use."
         )
 
     print(
-        "🤖 Starting Company Policy UI..."
+        "🖥️ Starting Company Policy Agent UI..."
     )
 
-    return subprocess.Popen(
+    environment = os.environ.copy()
+
+    existing_pythonpath = environment.get(
+        "PYTHONPATH",
+        "",
+    )
+
+    if existing_pythonpath:
+        environment["PYTHONPATH"] = (
+            PROJECT_ROOT
+            + os.pathsep
+            + existing_pythonpath
+        )
+    else:
+        environment["PYTHONPATH"] = (
+            PROJECT_ROOT
+        )
+
+    print(
+        f"   Python path: {PROJECT_ROOT}"
+    )
+
+    process = subprocess.Popen(
         [
-            sys.executable,
-            "-m",
             "streamlit",
             "run",
             "app/ui.py",
@@ -172,127 +144,118 @@ def start_ui():
             str(UI_PORT),
             "--server.headless",
             "true",
-        ]
+        ],
+        cwd=PROJECT_ROOT,
+        env=environment,
+    )
+
+    return process
+
+
+def wait_for_ui():
+    """Wait until the unified Streamlit UI responds."""
+    print(
+        "⏳ Waiting for Streamlit UI..."
+    )
+
+    for attempt in range(30):
+        if is_service_running(UI_URL):
+            print(
+                "✅ Streamlit UI is running."
+            )
+            return
+
+        print(
+            f"   Waiting... ({attempt + 1}/30)"
+        )
+
+        time.sleep(1)
+
+    raise RuntimeError(
+        "❌ Streamlit UI did not start."
     )
 
 
 def open_chrome():
-    print("🌐 Opening Company Policy Agent in Chrome...")
+    """Open the unified application in Chrome."""
+    print(
+        "🌐 Opening Company Policy Agent..."
+    )
 
     try:
         subprocess.Popen(
             [
                 CHROME_PATH,
-                MONITORING_URL,
                 UI_URL,
             ]
-        )
-
-        print(
-            "✅ Chrome opened with Monitoring "
-            "Dashboard and Company Policy UI."
         )
 
     except FileNotFoundError:
         print(
             "⚠️ Chrome was not found at:"
         )
-
         print(
             f"   {CHROME_PATH}"
         )
-
         print()
         print(
-            "Open these URLs manually:"
+            "Open this URL manually:"
         )
-
         print(
-            f"   📊 Monitoring: {MONITORING_URL}"
-        )
-
-        print(
-            f"   🤖 Company Policy UI: {UI_URL}"
+            f"   🤖 Company Policy Agent: {UI_URL}"
         )
 
 
 def main():
-    monitoring_process = None
     ui_process = None
 
     try:
-        # --------------------------------------------------
-        # 1. Start backend
-        # --------------------------------------------------
-
         start_docker()
-
         wait_for_api()
 
-        # --------------------------------------------------
-        # 2. Start/check monitoring dashboard
-        # --------------------------------------------------
-
-        monitoring_process = start_monitoring()
-
-        wait_for_monitoring()
-
-        # --------------------------------------------------
-        # 3. Start/check Company Policy UI
-        # --------------------------------------------------
-
         ui_process = start_ui()
-
-        # Give Streamlit a moment to finish initializing.
-        time.sleep(2)
-
-        # --------------------------------------------------
-        # 4. Open both applications in Chrome
-        # --------------------------------------------------
+        wait_for_ui()
 
         open_chrome()
 
-        # --------------------------------------------------
-        # 5. Display startup information
-        # --------------------------------------------------
-
         print()
         print("=" * 60)
-        print("🚀 Company Policy Agent Started")
-        print("=" * 60)
-        print()
-
-        print("📊 Monitoring Dashboard:")
         print(
-            f"   {MONITORING_URL}"
+            "🚀 Company Policy Agent Started"
         )
-
+        print("=" * 60)
         print()
 
-        print("🤖 Company Policy UI:")
+        print(
+            "🤖 Unified Streamlit Application:"
+        )
         print(
             f"   {UI_URL}"
         )
-
         print()
 
-        print("🐳 FastAPI:")
+        print(
+            "📊 Monitoring Dashboard:"
+        )
+        print(
+            "   Open the Streamlit sidebar "
+            "and select Monitoring Dashboard."
+        )
+        print()
+
+        print(
+            "⚡ FastAPI:"
+        )
         print(
             f"   {API_URL}"
         )
-
         print()
 
         print(
             "Press Ctrl+C to stop applications "
             "started by this script."
         )
-
         print("=" * 60)
-
-        # --------------------------------------------------
-        # Keep script running
-        # --------------------------------------------------
 
         while True:
             time.sleep(1)
@@ -304,21 +267,27 @@ def main():
         )
 
     finally:
-        # Only terminate Streamlit processes
-        # that THIS script started.
-
         if ui_process is not None:
             ui_process.terminate()
 
-        if monitoring_process is not None:
-            monitoring_process.terminate()
+            try:
+                ui_process.wait(
+                    timeout=5
+                )
+
+            except subprocess.TimeoutExpired:
+                ui_process.kill()
 
         print(
-            "🐳 Stopping Docker services..."
+            "🛑 Stopping Docker services..."
         )
 
         subprocess.run(
-            ["docker", "compose", "down"],
+            [
+                "docker",
+                "compose",
+                "down",
+            ],
             check=False,
         )
 
