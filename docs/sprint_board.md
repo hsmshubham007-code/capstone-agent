@@ -192,7 +192,7 @@ The current performance risk is primarily **LLM/provider latency**, rather than 
 | T18 | Implement audit trail | Should | 2 hrs | Done | `app/audit.py` |
 | T19 | Add LangGraph checkpointing | Should | 2 hrs | Done | SQLite checkpointing |
 | T20 | Add async tool execution | Should | 3 hrs | Done | `app/async_tools.py` |
-| T21 | Benchmark async execution | Should | 2 hrs | Done | `benchmark_async.py` |
+| T21 | Benchmark async execution | Should | 2 hrs | Done | `benchmarks/benchmark_async.py` |
 | T22 | Build Streamlit UI | Should | 2 hrs | Done | `app/ui.py` |
 | T23 | Build FastAPI API | Should | 2 hrs | Done | `app/api.py` |
 | T24 | Add health endpoint | Should | 30 min | Done | `/health` |
