@@ -4,144 +4,181 @@ from typing import Literal
 
 from langgraph.graph import END, START, StateGraph
 
-from app import tools
 from app.approval import create_approval_request
 from app.audit import record_tool_call
 from app.checkpoint import checkpointer
 from app.router import decide_tool
 from app.safety import requires_approval
 from app.state import AgentState
-
-NO_INFORMATION_ANSWER = (
-    "I don't have enough information in the "
-    "provided documents to answer that question."
-)
+from app.tools import search_documents_tool
 
 
-def router_node(
-    state: AgentState,
-):
-    start = time.perf_counter()
+def _extract_employee_id(question: str) -> str | None:
+    """Extract and normalize an employee ID from the request."""
 
-    tool = decide_tool(
-        state["question"],
-        state["conversation_history"],
+    patterns = [
+        (
+            r"\bemployee\s+(?:record\s+)?(?:ID\s*)?[:#]?\s*"
+            r"(EMP-?\d+|\d+)\b"
+        ),
+        r"\b(EMP-?\d+)\b",
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, question, re.IGNORECASE)
+
+        if match:
+            employee_id = match.group(1).upper()
+
+            if employee_id.startswith("EMP"):
+                digits = re.sub(r"\D", "", employee_id)
+                return f"EMP{digits}"
+
+            return f"EMP{employee_id}"
+
+    return None
+
+
+def _extract_salary(question: str) -> int | None:
+    """Extract a positive integer salary from the request."""
+
+    patterns = [
+        # Examples:
+        # salary to ₹80,000
+        # salary of Rs. 80,000
+        # salary to INR 80000
+        # salary to 80,000 per month
+        (
+            r"\bsalary\b[^\d]{0,40}"
+            r"([\d][\d,]*(?:\.\d{1,2})?)"
+        ),
+
+        # Examples:
+        # change salary to ₹80,000
+        # update salary to Rs. 80,000
+        (
+            r"\b(?:to|at)\s*[^\d]{0,20}"
+            r"([\d][\d,]*(?:\.\d{1,2})?)"
+        ),
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, question, re.IGNORECASE)
+
+        if not match:
+            continue
+
+        raw_amount = match.group(1).replace(",", "")
+
+        try:
+            amount = float(raw_amount)
+        except ValueError:
+            continue
+
+        if amount > 0 and amount.is_integer():
+            return int(amount)
+
+    return None
+
+
+def router_node(state: AgentState) -> dict:
+    """Choose the appropriate tool for the request."""
+
+    start_time = time.perf_counter()
+
+    question = state["question"]
+    history = state.get("conversation_history", [])
+
+    tool_name = decide_tool(question, history)
+
+    duration_ms = round(
+        (time.perf_counter() - start_time) * 1000,
+        2,
     )
 
-    duration = time.perf_counter() - start
-    request_id = state.get("request_id")
+    request_id = state.get("request_id", "")
 
     if request_id:
         record_tool_call(
             request_id=request_id,
             tool_name="router",
-            arguments={
-                "question": state["question"],
-            },
+            arguments={"question": question},
             status="SUCCESS",
-            outcome={
-                "selected_tool": tool,
-                "approval_required": requires_approval(tool),
-            },
+            outcome={"selected_tool": tool_name},
         )
 
+    trace_entry = {
+        "step": "router",
+        "duration": duration_ms,
+    }
+
     return {
-        "tool": tool,
-        "trace": state["trace"]
-        + [
-            {
-                "step": "router",
-                "tool": tool,
-                "duration": duration,
-            }
-        ],
+        "tool": tool_name,
+        "trace": state.get("trace", []) + [trace_entry],
     }
 
 
-def approval_node(
+def route_after_router(
     state: AgentState,
-):
-    request_id = state["request_id"]
-    tool_name = state["tool"]
+) -> Literal["approval", "search", "no_tool"]:
+    """Route risky actions through the approval node."""
+
+    tool_name = state.get("tool")
+
+    if tool_name and requires_approval(tool_name):
+        return "approval"
+
+    if tool_name == "search_documents":
+        return "search"
+
+    return "no_tool"
+
+
+def approval_node(state: AgentState) -> dict:
+    """Create a pending approval request without executing it."""
+
+    start_time = time.perf_counter()
+
     question = state["question"]
+    tool_name = state.get("tool")
+    request_id = state.get("request_id", "")
 
-    # -------------------------------------------------
-    # Update employee record
-    # -------------------------------------------------
+    if not tool_name:
+        raise ValueError("Could not identify the requested tool.")
 
+    # Extract arguments for the supported risky tools.
     if tool_name == "update_employee_record":
-        employee_match = re.search(
-            r"\bemployee(?:\s+record)?\s+(?:ID\s*)?(EMP-?\d+|\d+)\b",
-            question,
-            re.IGNORECASE,
-        )
+        employee_id = _extract_employee_id(question)
 
-        salary_match = re.search(
-            r"(?:salary\s+(?:to|of)\s+|\$)(\d+)",
-            question,
-            re.IGNORECASE,
-        )
+        if not employee_id:
+            raise ValueError("Could not identify employee ID.")
 
-        if not employee_match:
-            raise ValueError(
-                "Could not identify employee ID."
-            )
+        new_salary = _extract_salary(question)
 
-        if not salary_match:
-            raise ValueError(
-                "Could not identify new salary."
-            )
-
-        employee_id = employee_match.group(1).upper()
-
-        if employee_id.isdigit():
-            employee_id = f"EMP{employee_id}"
-
-        employee_id = employee_id.replace("EMP-", "EMP")
+        if new_salary is None:
+            raise ValueError("Could not identify new salary.")
 
         arguments = {
             "employee_id": employee_id,
             "field": "salary",
-            "new_value": int(
-                salary_match.group(1)
-            ),
+            "new_value": new_salary,
         }
 
-    # -------------------------------------------------
-    # Delete employee record
-    # -------------------------------------------------
-
     elif tool_name == "delete_employee_record":
-        employee_match = re.search(
-            r"\bemployee(?:\s+record)?\s+(?:ID\s*)?(EMP-?\d+|\d+)\b",
-            question,
-            re.IGNORECASE,
-        )
+        employee_id = _extract_employee_id(question)
 
-        if not employee_match:
-            raise ValueError(
-                "Could not identify employee ID."
-            )
-
-        employee_id = employee_match.group(1).upper()
-
-        if employee_id.isdigit():
-            employee_id = f"EMP{employee_id}"
-
-        employee_id = employee_id.replace("EMP-", "EMP")
+        if not employee_id:
+            raise ValueError("Could not identify employee ID.")
 
         arguments = {
             "employee_id": employee_id,
         }
 
-    # -------------------------------------------------
-    # Fallback
-    # -------------------------------------------------
-
     else:
-        arguments = {
-            "question": question,
-        }
+        raise ValueError(
+            f"Approval argument extraction is not implemented "
+            f"for tool: {tool_name}"
+        )
 
     approval = create_approval_request(
         request_id=request_id,
@@ -149,201 +186,146 @@ def approval_node(
         arguments=arguments,
     )
 
+    approval_id = approval["approval_id"]
+    approval_status = approval["status"]
+
     record_tool_call(
         request_id=request_id,
         tool_name=tool_name,
         arguments=arguments,
         status="BLOCKED",
         outcome={
-            "reason": "human_approval_required",
-            "approval_id": approval["approval_id"],
+            "approval_id": approval_id,
+            "approval_status": approval_status,
         },
     )
 
-    return {
-        "answer": (
-            "This action requires human approval "
-            "before it can be executed."
-        ),
-        "approval_id": approval["approval_id"],
-        "approval_status": "PENDING",
-        "sources": [],
-        "tools_used": [],
-        "retrieval_metadata": {},
-        "llm_metadata": None,
-        "trace": state["trace"]
-        + [
-            {
-                "step": "approval_required",
-                "tool": tool_name,
-                "approval_id": approval["approval_id"],
-                "status": "PENDING",
-                "duration": 0,
-            }
-        ],
+    answer = (
+        f"Human approval is required before executing "
+        f"{tool_name}. "
+        f"Approval request ID: {approval_id}. "
+        f"Status: {approval_status}. "
+        "No changes have been made."
+    )
+
+    duration_ms = round(
+        (time.perf_counter() - start_time) * 1000,
+        2,
+    )
+
+    trace_entry = {
+        "step": "approval",
+        "duration": duration_ms,
+        "approval_id": approval_id,
+        "approval_status": approval_status,
+        "arguments": arguments,
     }
-
-
-def search_node(
-    state: AgentState,
-):
-    start = time.perf_counter()
-
-    result = tools.search_documents_tool(
-        question=state["question"],
-        history=state["conversation_history"],
-        request_id=state.get("request_id"),
-    )
-
-    duration = time.perf_counter() - start
-
-    results = result.get(
-        "results",
-        [],
-    )
-
-    # -------------------------------------------------
-    # Retrieval found relevant documents
-    # -------------------------------------------------
-
-    if results:
-        answer = result["answer"]
-        sources = result["sources"]
-        retrieval_status = "RELEVANT"
-
-    # -------------------------------------------------
-    # Retrieval found nothing relevant
-    # -------------------------------------------------
-
-    else:
-        answer = NO_INFORMATION_ANSWER
-        sources = []
-        retrieval_status = "NO_RELEVANT_RESULTS"
-
-    retrieval_metadata = result.get(
-        "retrieval_metadata",
-        {},
-    )
 
     return {
         "answer": answer,
-        "sources": sources,
-        "tools_used": [
-            result["name"]
-        ],
-        "retrieval_metadata": retrieval_metadata,
-        "llm_metadata": result.get(
-            "llm_metadata"
-        ),
-        "trace": state["trace"]
-        + [
-            {
-                "step": "search_documents",
-                "tool": result["name"],
-                "sources": sources,
-                "results": results,
-                "retrieval_status": retrieval_status,
-                "retrieval_metadata": retrieval_metadata,
-                "duration": duration,
-            }
-        ],
-    }
-
-
-def no_tool_node(
-    state: AgentState,
-):
-    return {
-        "answer": NO_INFORMATION_ANSWER,
+        "approval_id": approval_id,
+        "approval_status": approval_status,
         "sources": [],
-        "tools_used": [],
-        "retrieval_metadata": {},
-        "llm_metadata": None,
-        "trace": state["trace"]
-        + [
-            {
-                "step": "no_tool",
-                "tool": "no_tool",
-                "duration": 0,
-            }
-        ],
+        "tools_used": state.get("tools_used", []) + [tool_name],
+        "trace": state.get("trace", []) + [trace_entry],
     }
 
 
-def route_after_router(
-    state: AgentState,
-) -> Literal[
-    "search",
-    "approval",
-    "no_tool",
-]:
-    tool = state["tool"]
+def search_node(state: AgentState) -> dict:
+    """Search company policy documents using the existing tool."""
 
-    if tool == "search_documents":
-        return "search"
+    start_time = time.perf_counter()
 
-    if requires_approval(tool):
-        return "approval"
+    question = state["question"]
+    history = state.get("conversation_history", [])
+    request_id = state.get("request_id")
 
-    return "no_tool"
+    result = search_documents_tool(
+        question=question,
+        history=history,
+        request_id=request_id,
+    )
+
+    elapsed_ms = round(
+        (time.perf_counter() - start_time) * 1000,
+        2,
+    )
+
+    sources = result.get("sources", [])
+    retrieved_results = result.get("results", [])
+
+    trace_entry = {
+        "step": "search_documents",
+        "duration": elapsed_ms,
+        "results": retrieved_results,
+    }
+
+    return {
+        "answer": result["answer"],
+        "sources": sources,
+        "tools_used": state.get("tools_used", []) + ["search_documents"],
+        "retrieval_metadata": result.get("retrieval_metadata"),
+        "llm_metadata": result.get("llm_metadata"),
+        "trace": state.get("trace", []) + [trace_entry],
+    }
 
 
-# =========================================================
-# Build LangGraph
-# =========================================================
+def no_tool_node(state: AgentState) -> dict:
+    """Respond when no suitable tool is selected."""
 
-builder = StateGraph(AgentState)
+    start_time = time.perf_counter()
 
-builder.add_node(
-    "router",
-    router_node,
-)
+    answer = (
+        "I don't have enough information to answer this request "
+        "using the available company-policy tools. "
+        "Please clarify what you would like to know."
+    )
 
-builder.add_node(
-    "search",
-    search_node,
-)
+    duration_ms = round(
+        (time.perf_counter() - start_time) * 1000,
+        2,
+    )
 
-builder.add_node(
-    "approval",
-    approval_node,
-)
+    trace_entry = {
+        "step": "no_tool",
+        "duration": duration_ms,
+    }
 
-builder.add_node(
-    "no_tool",
-    no_tool_node,
-)
+    return {
+        "answer": answer,
+        "sources": [],
+        "tools_used": state.get("tools_used", []),
+        "trace": state.get("trace", []) + [trace_entry],
+    }
 
-builder.add_edge(
-    START,
-    "router",
-)
 
-builder.add_conditional_edges(
-    "router",
-    route_after_router,
-    {
-        "search": "search",
-        "approval": "approval",
-        "no_tool": "no_tool",
-    },
-)
+def build_graph():
+    """Build and compile the Company Policy Agent graph."""
 
-builder.add_edge(
-    "search",
-    END,
-)
+    workflow = StateGraph(AgentState)
 
-builder.add_edge(
-    "approval",
-    END,
-)
+    workflow.add_node("router", router_node)
+    workflow.add_node("approval", approval_node)
+    workflow.add_node("search", search_node)
+    workflow.add_node("no_tool", no_tool_node)
 
-builder.add_edge(
-    "no_tool",
-    END,
-)
+    workflow.add_edge(START, "router")
 
-graph = builder.compile(
-    checkpointer=checkpointer,
-)
+    workflow.add_conditional_edges(
+        "router",
+        route_after_router,
+        {
+            "approval": "approval",
+            "search": "search",
+            "no_tool": "no_tool",
+        },
+    )
+
+    workflow.add_edge("approval", END)
+    workflow.add_edge("search", END)
+    workflow.add_edge("no_tool", END)
+
+    return workflow.compile(checkpointer=checkpointer)
+
+
+graph = build_graph()
