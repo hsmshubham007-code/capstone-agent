@@ -818,6 +818,12 @@ week2day5proj1/
 │   └── it_policy.pdf
 │
 ├── docs/
+│   ├── design_doc.md
+│   ├── data_feasibility_spike.md
+│   ├── iteration_log.md
+│   ├── mentor_update.md
+│   ├── PRODUCTION_EVIDENCE.md
+│   └── sprint_board.md
 │
 ├── evals/
 │   ├── charts/
@@ -846,7 +852,6 @@ week2day5proj1/
 ├── requirements-lock.txt
 ├── pytest.ini
 ├── SECURITY.md
-├── PRODUCTION_EVIDENCE.md
 ├── README.md
 └── .gitignore
 ```
