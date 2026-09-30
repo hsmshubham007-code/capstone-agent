@@ -8,6 +8,9 @@ services:
     env_file:
       - .env
 
+    environment:
+      EMBEDDING_MODEL: /app/models/all-MiniLM-L6-v2
+
     volumes:
       - ./storage/chroma:/app/storage/chroma
       - checkpoint_data:/app/storage/checkpoints

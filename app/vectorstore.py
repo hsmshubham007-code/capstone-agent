@@ -1,12 +1,20 @@
+import os
 from pathlib import Path
 
+from dotenv import load_dotenv
 from langchain_chroma import Chroma
 from langchain_community.embeddings import HuggingFaceEmbeddings
 
 from app.ingest import load_pdfs, split_documents
 
+load_dotenv()
+
 CHROMA_DIR = Path("storage/chroma")
-EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+
+EMBEDDING_MODEL = os.getenv(
+    "EMBEDDING_MODEL",
+    "sentence-transformers/all-MiniLM-L6-v2",
+)
 
 
 def create_vectorstore():
@@ -21,7 +29,7 @@ def create_vectorstore():
         documents=chunks,
         embedding=embeddings,
         persist_directory=str(CHROMA_DIR),
-        collection_name="capstone_documents"
+        collection_name="capstone_documents",
     )
 
     return vectorstore, len(documents), len(chunks)
@@ -30,6 +38,7 @@ def create_vectorstore():
 if __name__ == "__main__":
     vectorstore, pages, chunks = create_vectorstore()
 
+    print(f"Embedding model: {EMBEDDING_MODEL}")
     print(f"Pages embedded : {pages}")
     print(f"Chunks stored  : {chunks}")
     print(f"Chroma path    : {CHROMA_DIR}")

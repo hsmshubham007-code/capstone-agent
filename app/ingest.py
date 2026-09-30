@@ -1,15 +1,23 @@
+import os
 import shutil
 from pathlib import Path
 
+from dotenv import load_dotenv
 from langchain_chroma import Chroma
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
+load_dotenv()
+
 DATA_DIR = Path("data")
 CHROMA_DIR = Path("storage/chroma")
 COLLECTION_NAME = "capstone_documents"
-EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+
+EMBEDDING_MODEL = os.getenv(
+    "EMBEDDING_MODEL",
+    "sentence-transformers/all-MiniLM-L6-v2",
+)
 
 
 def load_pdfs():
@@ -61,6 +69,7 @@ if __name__ == "__main__":
     documents = load_pdfs()
     chunks = split_documents(documents)
 
+    print(f"Embedding model : {EMBEDDING_MODEL}")
     print(f"PDF pages loaded : {len(documents)}")
     print(f"Chunks created   : {len(chunks)}")
 

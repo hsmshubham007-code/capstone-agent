@@ -1,11 +1,19 @@
+import os
 import time
 
+from dotenv import load_dotenv
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 
+load_dotenv()
+
 CHROMA_DIR = "storage/chroma"
 COLLECTION_NAME = "capstone_documents"
-EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+
+EMBEDDING_MODEL = os.getenv(
+    "EMBEDDING_MODEL",
+    "sentence-transformers/all-MiniLM-L6-v2",
+)
 
 DEFAULT_MAX_DISTANCE = 1.10
 
@@ -27,6 +35,7 @@ def get_embeddings():
 
         print(
             f"[EMBEDDING INIT] "
+            f"model={EMBEDDING_MODEL} | "
             f"time={elapsed * 1000:.2f}ms"
         )
 
@@ -141,7 +150,6 @@ def search_documents(query, k=3, max_distance=DEFAULT_MAX_DISTANCE):
     ]
 
     filter_time = time.perf_counter() - filter_start
-
     total_time = time.perf_counter() - total_start
 
     print(

@@ -1,17 +1,21 @@
-﻿fastapi
-uvicorn[standard]
+﻿fastapi==0.142.1
+uvicorn[standard]==0.54.0
 openai
 python-dotenv
 
-langgraph
-langgraph-checkpoint-sqlite
+langgraph==1.2.12
+langgraph-checkpoint-sqlite==3.1.1
 
-langchain-chroma
+langchain-chroma==1.1.0
 langchain-huggingface==1.2.2
-langchain-community
+langchain-community==0.4.2
 
-chromadb
-sentence-transformers
+# ChromaDB is currently retained at 1.5.9.
+# pip-audit reports known vulnerabilities for this version.
+# No fixed release is currently available through the configured index.
+chromadb==1.5.9
+
+sentence-transformers==6.1.0
 pypdf
 
 streamlit

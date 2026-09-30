@@ -649,7 +649,7 @@ All checks passed
 
 Pytest:
 
-40 passed
+41 passed
 
 pip check:
 
@@ -693,10 +693,10 @@ origin/main
 
 Working tree:
 
-clean
+Modified during the current production-hardening update; final clean-tree status will be verified after the changes are committed.
 ```
 
-The repository is synchronized with the remote branch and contains no uncommitted changes.
+The repository is synchronized with origin/main; the working tree contains the production-hardening changes described above, which will be committed after final verification.
 
 ---
 
@@ -812,4 +812,9 @@ Recover to normal operation
 
 The production verification also demonstrated controlled behavior for both invalid API input and LLM service failure.
 
-The repository is clean, the Docker service is healthy, runtime monitoring is operational, and the production verification evidence has been completed.
+The Docker service is healthy, runtime monitoring is operational, and the production verification evidence has been completed. Final repository cleanliness will be verified after the production-hardening changes are committed.
+
+
+
+
+
